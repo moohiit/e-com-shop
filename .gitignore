@@ -10,6 +10,7 @@ dist/
 build/
 out/
 coverage/
+cookies.txt
 .tmp/
 .temp/
 .cache/
