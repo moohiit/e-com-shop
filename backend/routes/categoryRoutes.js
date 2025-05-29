@@ -6,19 +6,19 @@ import {
   updateCategory,
   deleteCategory,
 } from '../controllers/categoryController.js';
-import { protect, adminOnly } from '../middleware/authMiddleware.js';
+import { protect, isSellerOrAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router
   .route('/')
   .get(getCategories)
-  .post(protect, adminOnly, createCategory);
+  .post(protect, isSellerOrAdmin, createCategory);
 
 router
   .route('/:id')
   .get(getCategoryById)
-  .put(protect, adminOnly, updateCategory)
-  .delete(protect, adminOnly, deleteCategory);
+  .put(protect, isSellerOrAdmin, updateCategory)
+  .delete(protect, isSellerOrAdmin, deleteCategory);
 
 export default router;

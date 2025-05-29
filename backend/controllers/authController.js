@@ -50,13 +50,25 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res
+    .status(400)
+    .json({ success: false, message: "Email and password are required." });
+  }
+  // find user by email
   const user = await User.findOne({ email });
+  // if user not found or password does not match
   if (!user || !(await user.matchPassword(password))) {
     return res
-      .status(401)
-      .json({ success: false, message: "Invalid credentials" });
+    .status(401)
+    .json({ success: false, message: "Invalid credentials" });
   }
-
+  // Check if user is active
+  if (!user.isActive) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Your Account is deactivated. Please contact Customer Support " });
+  }
   const token = user.getSignedJwtToken();
   setTokenCookie(res, token);
   console.log(`User logged in: ${user.email}`);
