@@ -47,6 +47,7 @@ export const isSeller = (req, res, next) => {
     res.status(403).json({ success: false, message: 'Seller access denied' });
   }
 };
+
 export const isUser = (req, res, next) => {
   if (req.user && req.user.role === 'user') {
     next();
@@ -54,6 +55,7 @@ export const isUser = (req, res, next) => {
     res.status(403).json({ success: false, message: 'User access denied' });
   }
 };
+
 export const isSellerOrAdmin = (req, res, next) => {
   if (req.user && (req.user.role === 'seller' || req.user.role === 'admin')) {
     next();

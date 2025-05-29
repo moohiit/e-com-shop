@@ -23,4 +23,22 @@ app.use((err, req, res, next) => {
 // Import and use the auth routes
 import authRoutes from './routes/authRoutes.js';
 app.use('/api/auth', authRoutes);
+// Import and use the admin routes
+import adminRoutes from './routes/adminRoutes.js';
+app.use('/api/admin', adminRoutes);
+// Import and use the category routes
+import categoryRoutes from './routes/categoryRoutes.js';
+app.use('/api/category', categoryRoutes);
+// Import and use the product routes
+import productRoutes from './routes/productRoutes.js';
+app.use('/api/product', productRoutes);
+// Import and use the user routes
+import userRoutes from './routes/userRoutes.js';
+app.use('/api/user', userRoutes);
+// Import and use the image upload routes
+import uploadRoutes from './routes/uploadRoutes.js';
+app.use('/api/upload', uploadRoutes);
+
+
+
 export default app;
