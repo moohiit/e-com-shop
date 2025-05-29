@@ -36,6 +36,14 @@ export const updateUserProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    // Check if the email is already taken by another user
+    if (req.body.email && req.body.email !== user.email) {
+      const existingUser = await User.findOne({ email: req.body.email });
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: 'Email is already in use' });
+      }
+    }
+    // Update user fields
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
 
@@ -56,7 +64,8 @@ export const updateUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
@@ -76,7 +85,7 @@ export const deactivateOwnAccount = async (req, res) => {
     await user.save();
 
     res.clearCookie('jwt'); // Log the user out
-    res.json({ success: true, message: 'Account deactivated' });
+    res.json({ success: true, message: 'Account deactivated. Now contact support to get activated again.' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
