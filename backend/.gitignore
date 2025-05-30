@@ -36,3 +36,6 @@ coverage/
 tmp/
 temp/
 .cache/
+
+# Temporary files
+cookies.txt
