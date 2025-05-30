@@ -1,17 +1,30 @@
-import Category from '../models/Category.js';
-import mongoose from 'mongoose';
+import Category from "../models/Category.js";
+import mongoose from "mongoose";
+import slugify from "slugify";
 
+// @desc    Create a new category
+// @route   POST /api/categories
+// @access  Private/Seller or Admin
 export const createCategory = async (req, res) => {
   try {
-    const { name, slug, parent } = req.body;
+    const { name, parent } = req.body;
 
+    const rawName = name.replace(/['"]/g, ""); // Remove apostrophes and quotes
+    const slug = slugify(rawName, { lower: true });
+
+    console.log("Generated slug:", slug); 
     if (!name || !slug) {
-      return res.status(400).json({ success: false, message: 'Name and slug are required.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and slug are required." });
     }
 
     const existing = await Category.findOne({ $or: [{ name }, { slug }] });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'Category name or slug already exists.' });
+      return res.status(409).json({
+        success: false,
+        message: "Category name or slug already exists.",
+      });
     }
 
     const newCategory = new Category({ name, slug, parent: parent || null });
@@ -25,7 +38,9 @@ export const createCategory = async (req, res) => {
 
 export const getCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).populate('parent');
+    const categories = await Category.find({ isActive: true }).populate(
+      "parent"
+    );
     res.json({ success: true, data: categories });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -35,12 +50,16 @@ export const getCategories = async (req, res) => {
 export const getCategoryById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid ID format.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id).populate("parent");
     if (!category || !category.isActive) {
-      return res.status(404).json({ success: false, message: 'Category not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     res.json({ success: true, data: category });
@@ -51,15 +70,27 @@ export const getCategoryById = async (req, res) => {
 
 export const updateCategory = async (req, res) => {
   try {
-    const { name, slug, parent } = req.body;
+    const { name, parent } = req.body;
+    const rawName = name.replace(/['"]/g, ""); // Remove apostrophes and quotes
+    const slug = slugify(rawName, { lower: true });
 
+    console.log("Generated slug:", slug); 
+    if (!name || !slug) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and slug are required." });
+    }
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid ID format.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
     const category = await Category.findById(req.params.id);
     if (!category || !category.isActive) {
-      return res.status(404).json({ success: false, message: 'Category not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     if (name) category.name = name;
@@ -77,18 +108,51 @@ export const updateCategory = async (req, res) => {
 export const deleteCategory = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid ID format.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
     const category = await Category.findById(req.params.id);
     if (!category || !category.isActive) {
-      return res.status(404).json({ success: false, message: 'Category not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     category.isActive = false;
     await category.save();
 
-    res.json({ success: true, message: 'Category deactivated successfully.' });
+    res.json({ success: true, message: "Category deactivated successfully." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const restoreCategory = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
+    }
+
+    const category = await Category.findById(req.params.id);
+    if (!category || category.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found or already active.",
+      });
+    }
+
+    category.isActive = true;
+    await category.save();
+
+    res.json({
+      success: true,
+      message: "Category reactivated successfully.",
+      data: category,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
