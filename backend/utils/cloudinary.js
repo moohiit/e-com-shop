@@ -4,9 +4,9 @@ import { v2 as cloudinary } from 'cloudinary';
 
     // Configuration
     cloudinary.config({ 
-        cloud_name: 'dneppheue', 
-        api_key: '718416622349697', 
-        api_secret: 'WGt1QiMQEd53bgzHvwQhiwMpX8w' 
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+        api_secret: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
     });
     
     // Upload an image
