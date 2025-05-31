@@ -17,7 +17,8 @@ const storage = new CloudinaryStorage({
 
       return {
         folder: folder,
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'svg', 'avif', 'gif'],
+        filename: publicId, // Use a unique name to avoid conflicts
         public_id: publicId,
         transformation: [
           {

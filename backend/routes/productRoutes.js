@@ -7,6 +7,7 @@ import {
   deleteProduct,
   restoreProduct,
   getProductCount,
+  getProductsByCategory,
 } from '../controllers/productController.js';
 
 import { isSeller, isSellerOrAdmin, protect } from '../middleware/authMiddleware.js';
@@ -33,5 +34,8 @@ router.delete('/:id', protect, isSellerOrAdmin, deleteProduct);
 
 // Restore soft-deleted product
 router.patch('/restore/:id', protect, isSellerOrAdmin, restoreProduct);
+
+// Get products by category
+router.get('/category/:categoryId', getProductsByCategory);
 
 export default router;
