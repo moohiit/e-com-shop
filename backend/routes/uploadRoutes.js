@@ -16,7 +16,7 @@ const getUploadFolder = (req, res, next) => {
 };
 
 // POST /api/upload/single
-router.post("/single", getUploadFolder, (req, res, next) => {
+router.post("/single", protect, getUploadFolder, (req, res, next) => {
   upload.single("image")(req, res, (err) => {
     if (err) {
       console.error("Upload error:", err);
@@ -49,7 +49,7 @@ router.post("/single", getUploadFolder, (req, res, next) => {
 });
 
 // POST /api/upload/multiple
-router.post("/multiple", getUploadFolder, (req, res, next) => {
+router.post("/multiple", protect, getUploadFolder, (req, res, next) => {
   upload.array("images", 5)(req, res, (err) => {
     if (err) {
       console.error("Upload error:", err);

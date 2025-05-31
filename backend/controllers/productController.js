@@ -1,27 +1,37 @@
-import Product from '../models/Product.js';
-import mongoose from 'mongoose';
+import slugify from "slugify";
+import Product from "../models/Product.js";
+import mongoose from "mongoose";
 
 export const createProduct = async (req, res) => {
   try {
     const {
-      name, slug, description, brand,
-      price, discountPrice, stock, images, category,
+      name,
+      description,
+      brand,
+      price,
+      discountPrice,
+      stock,
+      images,
+      category,
     } = req.body;
 
+    const rawName = name.replace(/['"]/g, "");
+    const slug = slugify(rawName, { lower: true, strict: true });
+
     if (!name || !slug || !description || !price || !stock || !images || !category) {
-      return res.status(400).json({ success: false, message: 'All required fields must be filled.' });
+      return res.status(400).json({ success: false, message: "All required fields must be filled." });
     }
 
     const existing = await Product.findOne({ slug });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'Product slug already exists.' });
+      return res.status(409).json({ success: false, message: "Product slug already exists." });
     }
 
     const product = new Product({
       name,
       slug,
       description,
-      brand,
+      brand: brand || '',
       price,
       discountPrice: discountPrice || price,
       stock,
@@ -32,9 +42,8 @@ export const createProduct = async (req, res) => {
 
     const saved = await product.save();
     res.status(201).json({ success: true, data: saved });
-
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || 'Internal server error.' });
+    res.status(500).json({ success: false, message: error.message || "Internal server error." });
   }
 };
 
@@ -48,30 +57,67 @@ export const getAllProducts = async (req, res) => {
       maxPrice,
       page = 1,
       limit = 10,
-      sort = 'latest',
+      sort = "latest",
     } = req.query;
 
+    console.log("Raw Query Parameters:", req.query);
+    
     const query = { isActive: true };
-
-    if (search) query.name = { $regex: search, $options: 'i' };
-    if (category) query.category = category;
-    if (brand) query.brand = { $regex: brand, $options: 'i' };
+    
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    // Filter by category
+    if (category) {
+      query.category = category;
+    }
+    
+    // Filter by brand
+    if (brand) {
+      query.brand = { $regex: brand, $options: "i" };
+    }
+    
+    // Price range filter
     if (minPrice || maxPrice) {
       query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+      
+      if (minPrice) {
+        const min = Number(minPrice);
+        if (isNaN(min)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "minPrice must be a valid number" 
+          });
+        }
+        query.price.$gte = min;
+      }
+      
+      if (maxPrice) {
+        const max = Number(maxPrice);
+        if (isNaN(max)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "maxPrice must be a valid number" 
+          });
+        }
+        query.price.$lte = max;
+      }
     }
 
-    // Determine sort order
-    let sortOption = { createdAt: -1 };
-    if (sort === 'price_asc') sortOption = { price: 1 };
-    else if (sort === 'price_desc') sortOption = { price: -1 };
-    else if (sort === 'popular') sortOption = { ratingsAverage: -1 };
+    console.log("Final Query Object:", query);
 
+    // Sorting
+    let sortOption = { createdAt: -1 }; // default: latest first
+    if (sort === "price_asc") sortOption = { price: 1 };
+    else if (sort === "price_desc") sortOption = { price: -1 };
+    else if (sort === "popular") sortOption = { ratingsAverage: -1 };
+
+    // Pagination
     const total = await Product.countDocuments(query);
-
     const products = await Product.find(query)
-      .populate('category', 'name')
+      .populate("category", "name")
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -83,10 +129,16 @@ export const getAllProducts = async (req, res) => {
         total,
         page: Number(page),
         pages: Math.ceil(total / limit),
+        limit: Number(limit),
       },
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in getAllProducts:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -95,17 +147,17 @@ export const getProductById = async (req, res) => {
     const id = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid product ID.' });
+      return res.status(400).json({ success: false, message: "Invalid product ID." });
     }
 
-    const product = await Product.findById(id).populate('category', 'createdBy');
+    const product = await Product.findById(id).populate("category");
     if (!product || !product.isActive) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.status(404).json({ success: false, message: "Product not found." });
     }
 
     res.json({ success: true, data: product });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || 'Internal server error.' });
+    res.status(500).json({ success: false, message: error.message || "Internal server error." });
   }
 };
 
@@ -114,25 +166,43 @@ export const updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (!product || !product.isActive) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Check if the logged-in user is the owner
     if (product.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to update this product' });
+      return res.status(403).json({ success: false, message: "Not authorized to update this product" });
     }
 
-    // Update fields
-    const updatableFields = ['name', 'description', 'price', 'brand', 'category', 'stock', 'images'];
-    updatableFields.forEach(field => {
+    const updatableFields = [
+      "name",
+      "description",
+      "price",
+      "discountPrice",
+      "brand",
+      "category",
+      "stock",
+      "images",
+      "ratingsAverage",
+      "numReviews",
+    ];
+
+    updatableFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         product[field] = req.body[field];
       }
     });
 
-    const updatedProduct = await product.save();
+    if (req.body.name) {
+      const rawName = req.body.name.replace(/['"]/g, "");
+      product.slug = slugify(rawName, { lower: true, strict: true });
+    }
 
-    res.json({ success: true, data: updatedProduct });
+    if (req.body.price && !req.body.discountPrice) {
+      product.discountPrice = req.body.price;
+    }
+
+    const updatedProduct = await product.save();
+    res.json({ success: true, data: updatedProduct, message: "Product updated successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -142,18 +212,19 @@ export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product || !product.isActive) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.status(404).json({ success: false, message: "Product not found." });
     }
-    // Check if the logged-in user is the owner or an admin
-    if (product.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this product.' });
+
+    if (product.createdBy.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this product." });
     }
+
     product.isActive = false;
     await product.save();
 
-    res.json({ success: true, message: 'Product deactivated (soft deleted).' });
+    res.json({ success: true, message: "Product deactivated (soft deleted)." });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || 'Internal server error.'});
+    res.status(500).json({ success: false, message: error.message || "Internal server error." });
   }
 };
 
@@ -161,18 +232,17 @@ export const restoreProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product || product.isActive) {
-      return res.status(404).json({ success: false, message: 'Product not found or already active.' });
+      return res.status(404).json({ success: false, message: "Product not found or already active." });
     }
 
-    // Check if the logged-in user is an admin or the owner
-    if (product.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized to restore this product.' });
+    if (product.createdBy.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to restore this product." });
     }
-    // Restore the product
+
     product.isActive = true;
     await product.save();
 
-    res.json({ success: true, message: 'Product restored successfully.' });
+    res.json({ success: true, message: "Product restored successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -187,6 +257,23 @@ export const getProductCount = async (req, res) => {
   }
 };
 
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ success: false, message: "Invalid category ID." });
+    }
 
+    const products = await Product.find({ category: categoryId, isActive: true })
+      .populate("category", "name")
+      .sort({ createdAt: -1 });
 
+    if (products.length === 0) {
+      return res.status(404).json({ success: false, message: "No products found in this category." });
+    }
 
+    res.json({ success: true, data: products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Internal server error." });
+  }
+};
