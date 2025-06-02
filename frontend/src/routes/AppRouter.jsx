@@ -6,6 +6,8 @@ import ProtectedRoute from "./ProtectedRoute";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import SellerLayout from "../layouts/SellerLayout";
 import RoleBasedRedirect from "./RoleBasedRedirect";
+import AdminLayout from '../layouts/AdminLayout'
+
 const Home = lazy(() => import("../pages/Home/Home"));
 const ProductListing = lazy(() => import("../pages/Products/ProductListing"));
 const ProductDetail = lazy(() => import("../pages/Products/ProductDetail"));
@@ -24,7 +26,10 @@ const AddProduct = lazy(() => import("../pages/Seller/AddProduct"));
 const ManageOrders = lazy(() => import("../pages/Seller/ManageOrders"));
 const ManageCategories = lazy(() => import("../pages/Seller/ManageCategories"));
 const NotFound = lazy(() => import("../pages/NotFound/NotFound"));
-
+const AdminDashboard = lazy(() => import('../pages/Admin/AdminDashboard'))
+const ManageUsers = lazy(() => import('../pages/Admin/ManageUsers'))
+const AdminProducts = lazy(() => import('../pages/Admin/AdminProducts'))
+const AdminCategories = lazy(() => import('../pages/Admin/AdminCategories'))
 export function AppRouter() {
   return (
     <Suspense fallback={<LoadingSpinner fullScreen />}>
@@ -60,6 +65,15 @@ export function AppRouter() {
             <Route path="add-product" element={<AddProduct />} />
             <Route path="orders" element={<ManageOrders />} />
             <Route path="categories" element={<ManageCategories />} />
+          </Route>
+        </Route>
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<ManageUsers />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="categories" element={<AdminCategories />} />
           </Route>
         </Route>
         {/* Catch-all for 404 */}

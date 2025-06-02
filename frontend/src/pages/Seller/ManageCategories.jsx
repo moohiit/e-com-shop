@@ -1,9 +1,25 @@
-import React from 'react'
+import AddCategoryModal from '../../modals/AddCategoryModal';
+import CategoryList from '../../components/category/CategoryList';
+import { useState } from 'react';
 
-function ManageCategories() {
+export default function ManageCategoryPage() {
+  const [showModal, setShowModal] = useState(false);
+
   return (
-    <div>ManageCategories</div>
-  )
-}
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Manage Categories</h1>
+        <button
+          onClick={() => setShowModal(true)}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          + Add Category
+        </button>
+      </div>
 
-export default ManageCategories
+      <CategoryList />
+
+      {showModal && <AddCategoryModal onClose={() => setShowModal(false)} />}
+    </div>
+  );
+}
