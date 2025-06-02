@@ -4,16 +4,16 @@ import { logout } from '../../features/auth/authSlice.js'
 import { useLogoutMutation } from '../../features/auth/authApi.js'
 import { useTheme } from '../../theme/ThemeProvider'
 import { motion } from 'framer-motion'
-import { FaShoppingCart, FaHeart, FaUser, FaSun, FaMoon, FaSearch, FaBars, FaTimes } from 'react-icons/fa'
+import { FaShoppingCart, FaHeart, FaUser, FaSun, FaMoon, FaBars, FaTimes } from 'react-icons/fa'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import SearchBar from './SearchBar'
 
 const Navbar = () => {
   const { darkMode, toggleTheme } = useTheme()
-  const { user, token } = useSelector(state => state.auth)
+  const { user } = useSelector(state => state.auth)
   const { items: cartItems } = useSelector(state => state.cart)
-  // const [logoutApi] = useLogoutMutation()
+  const [logoutApi] = useLogoutMutation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -21,7 +21,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      // await logoutApi().unwrap()
+      await logoutApi().unwrap()
       dispatch(logout())
       navigate('/auth/login')
       toast.success('Logged out successfully')
@@ -113,7 +113,7 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {token ? (
+            {user ? (
               <div className="relative group">
                 <button className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   <FaUser size={16} />
@@ -235,7 +235,7 @@ const Navbar = () => {
                 </div>
               </div>
 
-              {token ? (
+              {user ? (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <Link
                     to="/account"

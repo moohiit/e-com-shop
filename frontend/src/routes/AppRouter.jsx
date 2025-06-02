@@ -13,6 +13,11 @@ const Checkout = lazy(() => import('../pages/Checkout/Checkout'))
 const Login = lazy(() => import('../pages/Auth/Login'))
 const Register = lazy(() => import('../pages/Auth/Register'))
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'))
+const About = lazy(() => import('../pages/About/About'))
+const Contact = lazy(() => import('../pages/Contact/Contact'))
+const Wishlist = lazy(() => import('../pages/Wishlist/Wishlist'))
+const Orders = lazy(() => import('../pages/Orders/Orders'))
+// const NotFound = lazy(() => import('../pages/NotFound/NotFound'))
 
 export function AppRouter() {
   return (
@@ -30,10 +35,14 @@ export function AppRouter() {
           <Route path="products" element={<ProductListing />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
-
+          <Route path="about" element={<About />} />
+          <Route path="contact" element={<Contact />} />
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="checkout" element={<Checkout />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path='wishlist' element={<Wishlist />} />
+            <Route path='orders' element={<Orders />} />
           </Route>
         </Route>
       </Routes>

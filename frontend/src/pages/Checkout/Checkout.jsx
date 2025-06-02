@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Stepper, Step, StepLabel, Button } from '@mui/material';
-import { AddressForm, PaymentForm, OrderReview } from '../../components/checkout';
+import { Stepper, Step, StepLabel } from '@mui/material';
+import AddressForm from '../../components/checkout/AddressForm';
+import PaymentForm from '../../components/checkout/PaymentForm';
+import OrderReview from '../../components/checkout/OrderReview';
 import { motion } from 'framer-motion';
 
 const steps = ['Shipping Address', 'Payment Details', 'Review Order'];
