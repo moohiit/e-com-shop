@@ -15,7 +15,6 @@ const Navbar = () => {
   const { items: cartItems } = useSelector(state => state.cart)
   const [logoutApi] = useLogoutMutation()
   const dispatch = useDispatch()
-  const navigate = useNavigate()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -23,7 +22,6 @@ const Navbar = () => {
     try {
       await logoutApi().unwrap()
       dispatch(logout())
-      navigate('/auth/login')
       toast.success('Logged out successfully')
     } catch (err) {
       toast.error('Logout failed')
