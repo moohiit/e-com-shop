@@ -8,6 +8,9 @@ export default function RoleBasedRedirect() {
   if (user?.role === 'seller') {
     return <Navigate to="/seller/dashboard" replace />
   }
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />
+  }
 
   if (user?.role === 'user') {
     return <Navigate to="/dashboard" replace />
