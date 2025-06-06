@@ -1,24 +1,47 @@
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { addCategory } from '../features/category/categorySlice';
+import { useState, useEffect } from 'react';
+import {
+  useAddCategoryMutation,
+  useUpdateCategoryMutation,
+  useFetchCategoriesQuery,
+} from '../features/category/categoryApiSlice';
 
-export default function AddCategoryModal({ onClose }) {
-  const dispatch = useDispatch();
-  const { categories, loading, error } = useSelector((state) => state.category);
-
+export default function AddCategoryModal({ onClose, existingCategory = null }) {
   const [name, setName] = useState('');
   const [parent, setParent] = useState('');
 
-  const handleSubmit = (e) => {
+  const { data: response } = useFetchCategoriesQuery();
+  const categories = response?.categories || [];
+
+  const [addCategory, { isLoading: adding, error: addError }] = useAddCategoryMutation();
+  const [updateCategory, { isLoading: updating, error: updateError }] = useUpdateCategoryMutation();
+
+  // Prefill form if editing
+  useEffect(() => {
+    if (existingCategory) {
+      setName(existingCategory.name || '');
+      setParent(existingCategory.parent?._id || '');
+    }
+  }, [existingCategory]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = { name };
-    if (parent) data.parent = parent;
-    dispatch(addCategory(data)).then((res) => {
-      if (!res.error) {
-        onClose();  // Close modal on success
+    const categoryData = { name };
+    if (parent) categoryData.parent = parent;
+
+    try {
+      if (existingCategory) {
+        await updateCategory({ id: existingCategory._id, data: categoryData }).unwrap();
+      } else {
+        await addCategory(categoryData).unwrap();
       }
-    });
+      onClose(); // Close modal on success
+    } catch (err) {
+      console.error('Failed to save category:', err);
+    }
   };
+
+  const isLoading = adding || updating;
+  const error = addError || updateError;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -26,7 +49,9 @@ export default function AddCategoryModal({ onClose }) {
         onSubmit={handleSubmit}
         className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
       >
-        <h2 className="text-xl font-semibold mb-4">Add Category</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {existingCategory ? 'Edit Category' : 'Add Category'}
+        </h2>
 
         <input
           type="text"
@@ -43,14 +68,20 @@ export default function AddCategoryModal({ onClose }) {
           className="border p-2 w-full mb-3"
         >
           <option value="">No Parent</option>
-          {categories.map((cat) => (
-            <option key={cat._id} value={cat._id}>
-              {cat.name}
-            </option>
-          ))}
+          {categories
+            .filter((cat) => cat._id !== existingCategory?._id)
+            .map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.name}
+              </option>
+            ))}
         </select>
 
-        {error && <p className="text-red-500 mb-2">{error}</p>}
+        {error && (
+          <p className="text-red-500 mb-2">
+            {error.data?.message || 'Something went wrong'}
+          </p>
+        )}
 
         <div className="flex justify-end gap-2">
           <button
@@ -62,10 +93,16 @@ export default function AddCategoryModal({ onClose }) {
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={isLoading}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
-            {loading ? 'Adding...' : 'Add'}
+            {isLoading
+              ? existingCategory
+                ? 'Updating...'
+                : 'Adding...'
+              : existingCategory
+              ? 'Update'
+              : 'Add'}
           </button>
         </div>
       </form>

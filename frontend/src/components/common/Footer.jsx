@@ -32,11 +32,11 @@ const Footer = () => {
   ]
 
   const socialLinks = [
-    { icon: <FaFacebook />, to: 'https://facebook.com' },
-    { icon: <FaTwitter />, to: 'https://twitter.com' },
-    { icon: <FaInstagram />, to: 'https://instagram.com' },
-    { icon: <FaLinkedin />, to: 'https://linkedin.com' },
-    { icon: <FaGithub />, to: 'https://github.com' },
+    { icon: <FaFacebook />, to: 'https://facebook.com/profile.php?id=100008578542979' },
+    { icon: <FaTwitter />, to: 'https://twitter.com/mooohiit' },
+    { icon: <FaInstagram />, to: 'https://www.instagram.com/m.o.h.i.t.p.a.t.e.l/' },
+    { icon: <FaLinkedin />, to: 'https://www.linkedin.com/in/mohit-patel-51338a245' },
+    { icon: <FaGithub />, to: 'https://github.com/moohiit' },
   ]
 
   return (

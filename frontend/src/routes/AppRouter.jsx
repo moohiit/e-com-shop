@@ -15,6 +15,7 @@ const Cart = lazy(() => import("../pages/Cart/Cart"));
 const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
 const Login = lazy(() => import("../pages/Auth/Login"));
 const Register = lazy(() => import("../pages/Auth/Register"));
+const Profile = lazy(() => import("../pages/Profile/Profile"));
 const Dashboard = lazy(() => import("../pages/Dashboard/Dashboard"));
 const About = lazy(() => import("../pages/About/About"));
 const Contact = lazy(() => import("../pages/Contact/Contact"));
@@ -42,16 +43,20 @@ export function AppRouter() {
 
         {/* User Routes */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<RoleBasedRedirect />} />
+          <Route index element={<Home />} />
+          <Route path="dashboard" element={<RoleBasedRedirect />} />
           <Route path="products" element={<ProductListing />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
-
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["user", "seller", "admin"]} />}>
+            <Route path="profile" element={<Profile />} />
+          </Route>
           <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
             <Route path="checkout" element={<Checkout />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="user-dashboard" element={<Dashboard />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="orders" element={<Orders />} />
           </Route>

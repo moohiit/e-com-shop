@@ -124,7 +124,7 @@ export const getAllProducts = async (req, res) => {
 
     res.json({
       success: true,
-      data: products,
+      products,
       pagination: {
         total,
         page: Number(page),

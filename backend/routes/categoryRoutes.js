@@ -5,7 +5,8 @@ import {
   getCategoryById,
   updateCategory,
   deleteCategory,
-  restoreCategory,
+  toggleCategory,
+  getAllCategories,
 } from '../controllers/categoryController.js';
 import { protect, isSellerOrAdmin } from "../middleware/authMiddleware.js";
 
@@ -15,6 +16,7 @@ router
   .route('/')
   .get(getCategories)
   .post(protect, isSellerOrAdmin, createCategory);
+router.get('/all', getAllCategories);
 
 router
   .route('/:id')
@@ -22,6 +24,6 @@ router
   .put(protect, isSellerOrAdmin, updateCategory)
   .delete(protect, isSellerOrAdmin, deleteCategory);
 
-router.patch('/:id/restore', protect, isSellerOrAdmin, restoreCategory);
+router.patch('/:id/toggle', protect, isSellerOrAdmin, toggleCategory);
 
 export default router;

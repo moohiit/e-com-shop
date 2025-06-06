@@ -11,10 +11,8 @@ export default function RoleBasedRedirect() {
   if (user?.role === 'admin') {
     return <Navigate to="/admin/dashboard" replace />
   }
-
   if (user?.role === 'user') {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/user-dashboard" replace />
   }
-
   return <Home />
 }
