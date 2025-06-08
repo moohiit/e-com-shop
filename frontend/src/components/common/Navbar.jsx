@@ -147,7 +147,7 @@ const Navbar = () => {
                 <button className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   <FaUser size={16} />
                   <span className="font-medium">
-                    {(user?.name).split(" ")[0]}
+                    {(user?.name)?.split(" ")[0] || "Unknown"}
                   </span>
                 </button>
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200">

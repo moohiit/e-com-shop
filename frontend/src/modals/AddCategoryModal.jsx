@@ -15,7 +15,6 @@ export default function AddCategoryModal({ onClose, existingCategory = null }) {
   const [addCategory, { isLoading: adding, error: addError }] = useAddCategoryMutation();
   const [updateCategory, { isLoading: updating, error: updateError }] = useUpdateCategoryMutation();
 
-  // Prefill form if editing
   useEffect(() => {
     if (existingCategory) {
       setName(existingCategory.name || '');
@@ -34,7 +33,7 @@ export default function AddCategoryModal({ onClose, existingCategory = null }) {
       } else {
         await addCategory(categoryData).unwrap();
       }
-      onClose(); // Close modal on success
+      onClose();
     } catch (err) {
       console.error('Failed to save category:', err);
     }
@@ -44,10 +43,10 @@ export default function AddCategoryModal({ onClose, existingCategory = null }) {
   const error = addError || updateError;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-40 dark:bg-opacity-60 flex items-center justify-center z-50">
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
+        className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl shadow-lg p-6 w-full max-w-md"
       >
         <h2 className="text-xl font-semibold mb-4">
           {existingCategory ? 'Edit Category' : 'Add Category'}
@@ -59,13 +58,13 @@ export default function AddCategoryModal({ onClose, existingCategory = null }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="border p-2 w-full mb-3"
+          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full mb-3 rounded"
         />
 
         <select
           value={parent}
           onChange={(e) => setParent(e.target.value)}
-          className="border p-2 w-full mb-3"
+          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full mb-3 rounded"
         >
           <option value="">No Parent</option>
           {categories
@@ -87,22 +86,22 @@ export default function AddCategoryModal({ onClose, existingCategory = null }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+            className="px-4 py-2 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-gray-100 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-70"
           >
             {isLoading
               ? existingCategory
                 ? 'Updating...'
                 : 'Adding...'
               : existingCategory
-              ? 'Update'
-              : 'Add'}
+                ? 'Update'
+                : 'Add'}
           </button>
         </div>
       </form>

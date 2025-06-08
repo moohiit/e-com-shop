@@ -1,4 +1,4 @@
-import { useFetchAllCategoriesQuery, useDeleteCategoryMutation, useToggleCategoryMutation,  } from '../../features/category/categoryApiSlice';
+import { useFetchAllCategoriesQuery, useDeleteCategoryMutation, useToggleCategoryMutation } from '../../features/category/categoryApiSlice';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useState } from 'react';
 import AddCategoryModal from '../../modals/AddCategoryModal';
@@ -23,6 +23,7 @@ export default function CategoryList() {
       }
     }
   };
+
   const handleToggle = async (id) => {
     try {
       const response = await toggleCategory(id).unwrap();
@@ -34,6 +35,7 @@ export default function CategoryList() {
       console.error("Failed to toggle category:", err);
     }
   };
+
   const handleEdit = (category) => {
     setEditingCategory(category);
     setShowEditModal(true);
@@ -43,46 +45,50 @@ export default function CategoryList() {
   if (error) return <p className="text-red-500">Error loading categories</p>;
 
   return (
-    <div className="bg-white shadow rounded-xl p-4">
-      <table className="min-w-full table-auto border border-gray-200">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-4">
+      <table className="min-w-full table-auto border border-gray-200 dark:border-gray-700">
         <thead>
-          <tr className="bg-gray-100 text-left">
-            <th className="p-2 border-b">Name</th>
-            <th className="p-2 border-b">Slug</th>
-            <th className="p-2 border-b">Parent</th>
-            <th className="p-2 border-b">Status</th>
-            <th className="p-2 border-b">Actions</th>
+          <tr className="bg-gray-100 dark:bg-gray-700 text-left">
+            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">Name</th>
+            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">Slug</th>
+            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">Parent</th>
+            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">Status</th>
+            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">Actions</th>
           </tr>
         </thead>
         <tbody>
           {categories.map((cat) => (
-            <tr key={cat._id} className="hover:bg-gray-50">
-              <td className="p-2 border-b">{cat.name}</td>
-              <td className="p-2 border-b">{cat.slug}</td>
-              <td className="p-2 border-b">{cat.parent?.name || '—'}</td>
-              <td className="p-2 border-b">
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold 
-                  ${cat.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <tr key={cat._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">{cat.name}</td>
+              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">{cat.slug}</td>
+              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">{cat.parent?.name || '—'}</td>
+              <td className="p-2 border-b dark:border-gray-700">
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold
+                  ${cat.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900'
+                    : 'bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900'}`}>
                   {cat.isActive ? 'Active' : 'Inactive'}
                 </span>
               </td>
-              <td className="p-2 border-b">
+              <td className="p-2 border-b dark:border-gray-700 flex flex-wrap gap-2">
                 <button
                   onClick={() => handleEdit(cat)}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold hover:bg-blue-200"
+                  className="bg-blue-100 text-blue-800 dark:bg-blue-200 dark:text-blue-900 px-2 py-1 rounded text-xs font-semibold hover:bg-blue-200 dark:hover:bg-blue-300"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(cat._id)}
-                  className="ml-2 bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-semibold hover:bg-red-200"
+                  className="bg-red-100 text-red-700 dark:bg-red-200 dark:text-red-900 px-2 py-1 rounded text-xs font-semibold hover:bg-red-200 dark:hover:bg-red-300"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => handleToggle(cat._id)}
-                  className={`ml-2 px-2 py-1 rounded text-xs font-semibold 
-                    ${cat.isActive ? 'bg-red-100 text-red-800 hover:bg-red-300' : 'bg-green-100 text-green-800 hover:bg-green-300'}`}
+                  className={`px-2 py-1 rounded text-xs font-semibold
+                    ${cat.isActive
+                      ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900 dark:hover:bg-red-300'
+                      : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900 dark:hover:bg-green-300'}`}
                 >
                   {cat.isActive ? 'Deactivate' : 'Activate'}
                 </button>
