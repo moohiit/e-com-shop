@@ -20,6 +20,22 @@ export const productApiSlice = apiSlice.injectEndpoints({
       providesTags: ['Product'],
     }),
 
+    fetchAllProductsAdmin: builder.query({
+      query: (params) => ({
+        url: '/product/admin',
+        params,
+      }),
+      providesTags: ['Product'],
+    }),
+
+    fetchAllProductsSeller: builder.query({
+      query: (params) => ({
+        url: '/product/seller',
+        params,
+      }),
+      providesTags: ['Product'],
+    }),
+
     getProductById: builder.query({
       query: (id) => `/product/${id}`,
       providesTags: (result, error, id) => [{ type: 'Product', id }],
@@ -45,9 +61,9 @@ export const productApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ['Product'],
     }),
 
-    restoreProduct: builder.mutation({
+    toggleProduct: builder.mutation({
       query: (id) => ({
-        url: `/product/restore/${id}`,
+        url: `/product/toggle/${id}`,
         method: 'PATCH',
       }),
       invalidatesTags: ['Product'],
@@ -67,10 +83,12 @@ export const productApiSlice = apiSlice.injectEndpoints({
 export const {
   useCreateProductMutation,
   useFetchAllProductsQuery,
+  useFetchAllProductsAdminQuery,
+  useFetchAllProductsSellerQuery,
   useGetProductByIdQuery,
   useUpdateProductMutation,
   useDeleteProductMutation,
-  useRestoreProductMutation,
+  useToggleProductMutation,
   useGetProductCountQuery,
   useGetProductsByCategoryQuery,
 } = productApiSlice

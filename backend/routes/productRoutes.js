@@ -5,12 +5,14 @@ import {
   getProductById,
   updateProduct,
   deleteProduct,
-  restoreProduct,
   getProductCount,
   getProductsByCategory,
+  toggleProductStatus,
+  getAllProductsAdmin,
+  getAllProductsBySeller,
 } from '../controllers/productController.js';
 
-import { isSeller, isSellerOrAdmin, protect } from '../middleware/authMiddleware.js';
+import { isAdmin, isSeller, isSellerOrAdmin, protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -19,6 +21,12 @@ router.post('/', protect, isSeller, createProduct);
 
 // Get all products (with search, filter, pagination, sorting)
 router.get('/', getAllProducts);
+
+// get all products for admin (with search, filter, pagination, sorting)
+router.get('/admin', protect, isAdmin, getAllProductsAdmin);
+
+// Get all products for seller (with search, filter, pagination, sorting)
+router.get('/seller', protect, isSeller, getAllProductsBySeller);
 
 // Get product count
 router.get('/count', getProductCount);
@@ -33,7 +41,7 @@ router.put('/:id', protect, isSeller, updateProduct);
 router.delete('/:id', protect, isSellerOrAdmin, deleteProduct);
 
 // Restore soft-deleted product
-router.patch('/restore/:id', protect, isSellerOrAdmin, restoreProduct);
+router.patch("/toggle/:id", protect, isSellerOrAdmin, toggleProductStatus);
 
 // Get products by category
 router.get('/category/:categoryId', getProductsByCategory);
