@@ -29,7 +29,7 @@ const ImageSlider = ({ images, width = '100px', height = '80px', interval = 2000
       onMouseLeave={startAutoSlide}
     >
       <img
-        src={images[current]}
+        src={images[current].imageUrl}
         alt="Product"
         className="w-full h-full object-cover transition-all duration-300"
       />

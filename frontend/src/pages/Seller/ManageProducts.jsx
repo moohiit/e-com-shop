@@ -1,29 +1,35 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   useFetchAllProductsSellerQuery,
   useDeleteProductMutation,
   useToggleProductMutation,
-} from '../../features/products/productApiSlice';
-import { Loader2, Pencil, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import ImageSlider from '../../components/common/ImageSlider';
+} from "../../features/products/productApiSlice";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import ImageSlider from "../../components/common/ImageSlider";
+import { toast } from "react-hot-toast";
+import EditProductModal from "../../modals/EditProductModal";
+import { setSelectedProduct } from "../../features/products/productSlice";
+import { useDispatch } from "react-redux";
 
 function ManageProducts() {
+  const dispatch = useDispatch();
   const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-    brand: '',
-    minPrice: '',
-    maxPrice: '',
-    sort: 'latest',
+    search: "",
+    category: "",
+    brand: "",
+    minPrice: "",
+    maxPrice: "",
+    sort: "latest",
     page: 1,
     limit: 10,
   });
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useFetchAllProductsSellerQuery(filters);
+  const { data, isLoading, isError, refetch } =
+    useFetchAllProductsSellerQuery(filters);
   const [deleteProduct] = useDeleteProductMutation();
   const [toggleProduct] = useToggleProductMutation();
-  const [feedback, setFeedback] = useState(null);
 
   const handleInputChange = (e) => {
     setFilters((prev) => ({
@@ -31,36 +37,48 @@ function ManageProducts() {
       [e.target.name]: e.target.value,
       page: 1,
     }));
+    refetch()
+  };
+
+  const handleEditProduct = (product)=>{
+    dispatch(setSelectedProduct(product));
+    setShowEditModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    if (!window.confirm("Are you sure you want to delete this product?"))
+      return;
     try {
-      await deleteProduct(id).unwrap();
-      setFeedback({ type: 'success', message: 'Product deleted' });
-      refetch();
+      const response = await deleteProduct(id).unwrap();
+      if (response.success) {
+        toast.success(response.message || "Product deleted..");
+        refetch();
+      }
     } catch (err) {
-      setFeedback({ type: 'error', message: err?.data?.message || 'Delete failed' });
+      toast.error(err?.message || err.response.message || "Delete failed");
     }
   };
 
   const handleProductStatus = async (id) => {
-    if (!window.confirm('Are you sure you want to restore this product?')) return;
+    if (!window.confirm("Are you sure you want to restore this product?"))
+      return;
     try {
       const response = await toggleProduct(id).unwrap();
-      if (response.data.success) {
-        setFeedback({type:"success", message: response.data.message})
+      if (response.success) {
+        toast.success(response.message);
+        refetch();
       }
-      refetch();
     } catch (err) {
-      setFeedback({ type: 'error', message: err?.data?.message || 'Restore failed' });
+      toast.error(err?.message || err.response.message || "Delete failed");
     }
   };
 
   return (
     <div className="p-4 bg-white dark:bg-gray-900 rounded-xl shadow-md">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Manage Products</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+          Manage Products
+        </h2>
         <Link
           to="/seller/add-product"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -118,43 +136,72 @@ function ManageProducts() {
       {isLoading && <Loader2 className="animate-spin mx-auto" size={24} />}
       {isError && <p className="text-red-500">Failed to load products.</p>}
 
-      {feedback && (
-        <p className={`text-sm mb-2 ${feedback.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-          {feedback.message}
-        </p>
-      )}
-
       <div className="overflow-x-auto">
         <table className="min-w-full border divide-y divide-gray-300 dark:divide-gray-700">
           <thead className="bg-gray-100 dark:bg-gray-800">
             <tr>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Images</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Name</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Price</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Brand</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Stock</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Status</th>
-              <th className="text-left p-2 text-gray-700 dark:text-white">Actions</th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Images
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Name
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Price
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Brand
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Category
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Stock
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Status
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {data?.products?.map((product) => (
               <tr key={product._id} className="border-b dark:border-gray-700">
                 <td className="p-2 text-gray-800 dark:text-gray-200">
-                  <ImageSlider images={product.images} width="100px" height="100px" />
+                  <ImageSlider
+                    images={product.images}
+                    width="100px"
+                    height="100px"
+                  />
                 </td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">{product.name}</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">${product.price}</td>
-                <td className='p-2 text-gray-800 dark:text-gray-200'>{product.brand}</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">{product.stock}</td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
-                  {product.isActive ? 'Active' : 'Inactive'}
+                  {product.name}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  ₹{product.price}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  {product.brand}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  {product.category.name}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  {product.stock}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  {product.isActive ? "Active" : "Inactive"}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
                   <div className="flex items-center gap-2 h-full">
-                    <Link to={`/seller/products/edit/${product._id}`} className="text-blue-500 hover:underline">
+                    <button
+                      onClick={()=> handleEditProduct(product)}
+                      className="text-blue-500 hover:text-blue-800"
+                    >
                       <Pencil size={16} />
-                    </Link>
+                    </button>
                     <button
                       onClick={() => handleDelete(product._id)}
                       className="text-red-600 hover:text-red-800"
@@ -165,11 +212,10 @@ function ManageProducts() {
                       onClick={() => handleProductStatus(product._id)}
                       className="text-green-600 hover:text-green-800"
                     >
-                      {product.isActive ? 'Deactivate' : 'Activate'}
+                      {product.isActive ? "Deactivate" : "Activate"}
                     </button>
                   </div>
                 </td>
-
               </tr>
             ))}
           </tbody>
@@ -178,7 +224,9 @@ function ManageProducts() {
 
       <div className="flex justify-between items-center mt-4">
         <button
-          onClick={() => setFilters((prev) => ({ ...prev, page: prev.page - 1 }))}
+          onClick={() =>
+            setFilters((prev) => ({ ...prev, page: prev.page - 1 }))
+          }
           disabled={filters.page <= 1}
           className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >
@@ -188,13 +236,16 @@ function ManageProducts() {
           Page {data?.pagination?.page} of {data?.pagination?.pages}
         </span>
         <button
-          onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
+          onClick={() =>
+            setFilters((prev) => ({ ...prev, page: prev.page + 1 }))
+          }
           disabled={filters.page >= data?.pagination?.pages}
           className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >
           Next
         </button>
       </div>
+      {showEditModal && <EditProductModal onClose={() => setShowEditModal(false)} />}
     </div>
   );
 }
