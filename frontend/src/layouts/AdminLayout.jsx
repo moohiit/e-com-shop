@@ -3,12 +3,16 @@ import { useState } from 'react'
 import { useTheme } from '../theme/ThemeProvider'
 import { Menu, X, LogOut } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { logoutUser } from '../features/auth/authSlice'
+import { useLogoutMutation } from '../features/auth/authApi'
 
 export default function AdminLayout() {
   const { darkMode } = useTheme()
+  const [logoutApi] = useLogoutMutation();
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
-
+  const dispatch = useDispatch()
   const navItems = [
     { to: '/admin/dashboard', label: 'Dashboard' },
     { to: '/admin/users', label: 'Manage Users' },
@@ -17,9 +21,13 @@ export default function AdminLayout() {
     { to: '/admin/orders', label: 'Manage Orders' },
   ]
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/auth/login', { replace: true })
+  const handleLogout = async () => {
+    try {
+      dispatch(logoutUser())
+      navigate('/auth/login', { replace: true })
+    } catch (err) {
+      console.log(err)
+    }
   }
 
   return (

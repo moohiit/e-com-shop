@@ -2,11 +2,15 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useTheme } from '../theme/ThemeProvider'
 import { Menu, X, LogOut } from 'lucide-react'
+import { useDispatch } from 'react-redux'
+import { logoutUser } from '../features/auth/authSlice'
+
 
 export default function SellerLayout() {
   const { darkMode } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const navItems = [
     { to: '/', label: 'Home' },
@@ -18,8 +22,12 @@ export default function SellerLayout() {
   ]
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/auth/login', { replace: true })
+    try {
+      dispatch(logoutUser())
+      navigate('/auth/login', { replace: true })
+    } catch (err) {
+      console.log(err)
+    }
   }
 
   return (
