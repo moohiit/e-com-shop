@@ -1,7 +1,5 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../../features/auth/authSlice.js";
-import { useLogoutMutation } from "../../features/auth/authApi.js";
 import { useTheme } from "../../theme/ThemeProvider";
 import { motion } from "framer-motion";
 import {
@@ -24,23 +22,23 @@ import {
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import SearchBar from "./SearchBar";
+import { logoutUser } from "../../features/auth/authSlice";
 
 const Navbar = () => {
   const { darkMode, toggleTheme } = useTheme();
   const { user } = useSelector((state) => state.auth);
   const { items: cartItems } = useSelector((state) => state.cart);
-  const [logoutApi] = useLogoutMutation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
-      await logoutApi().unwrap();
-      dispatch(logout());
-      toast.success("Logged out successfully");
+      dispatch(logoutUser())
+      navigate('/auth/login', { replace: true })
     } catch (err) {
-      toast.error("Logout failed");
+      console.log(err)
     }
   };
 
@@ -65,11 +63,10 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        scrolled
+      className={`fixed w-full z-50 transition-all duration-300 ${scrolled
           ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
           : "bg-white dark:bg-gray-900"
-      }`}
+        }`}
     >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
@@ -89,10 +86,9 @@ const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) =>
-                  `flex items-center text-sm font-medium transition-colors ${
-                    isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  `flex items-center text-sm font-medium transition-colors ${isActive
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
                   }`
                 }
               >
@@ -234,10 +230,9 @@ const Navbar = () => {
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 ${
-                      isActive
-                        ? "font-medium text-blue-600 dark:text-blue-400"
-                        : ""
+                    `flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 ${isActive
+                      ? "font-medium text-blue-600 dark:text-blue-400"
+                      : ""
                     }`
                   }
                 >

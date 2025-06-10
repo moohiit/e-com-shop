@@ -25,10 +25,10 @@ const Login = () => {
       // console.log("Login response:", response.user);
       // Assuming response contains user info and token
       dispatch(loginSuccess(response));
-      toast.success("Logged in!");
+      toast.success(response.message || "Logged in!");
       navigate("/"); 
     } catch (err) {
-      toast.error(err?.message || "Login failed");
+      toast.error(err?.message || err.response.message || "Login failed");
     }
   };
 
