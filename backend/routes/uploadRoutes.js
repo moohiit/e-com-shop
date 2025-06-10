@@ -86,33 +86,36 @@ router.post("/multiple", protect, getUploadFolder, (req, res, next) => {
 });
 
 // DELETE /api/upload/:publicId
-router.delete("/:publicId", protect, async (req, res) => {
+router.delete('/*publicId', protect, async (req, res) => {
   try {
-    const { publicId } = req.params;
+    const publicId = req.params.publicId; 
+    // console.log(publicId);
+    const fullPublicId = publicId.join('/');
+    // console.log(fullPublicId);
 
-    // Cloudinary requires public ID without folder prefix
-    const shortId = publicId.split("/").pop();
-
-    const result = await cloudinary.uploader.destroy(shortId, {
+    const result = await cloudinary.uploader.destroy(fullPublicId, {
       invalidate: true,
-      resource_type: "image",
+      resource_type: 'image',
     });
 
-    if (result.result !== "ok") {
+    if (result.result !== 'ok') {
       return res.status(400).json({
         success: false,
-        message: "Delete failed: " + (result.result || "Unknown error"),
+        message: 'Delete failed: ' + (result.result || 'Unknown error'),
       });
     }
 
-    res.json({ success: true, message: "Image deleted" });
+    res.json({ success: true, message: 'Image deleted' });
   } catch (error) {
-    console.error("Delete error:", error);
+    console.error('Delete error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error during deletion",
+      message: error.message || 'Server error during deletion',
     });
   }
 });
+
+
+
 
 export default router;

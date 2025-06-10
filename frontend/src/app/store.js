@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { apiSlice } from "../services/apiSlice.js";
 import authReducer from "../features/auth/authSlice.js";
 import cartReducer from "../features/cart/cartSlice.js";
+import productReducer from "../features/products/productSlice.js"
 // Optional: if you're keeping UI-related category state (like selectedCategory)
 import categoryUIReducer from "../features/category/categorySlice.js"; // <- optional
 
@@ -10,6 +11,7 @@ export const store = configureStore({
     [apiSlice.reducerPath]: apiSlice.reducer, // <- apiSlice reducer
     auth: authReducer,
     cart: cartReducer,
+    product: productReducer,
     categoryUI: categoryUIReducer, // <- optional, if you have UI state for categories
   },
   middleware: (getDefaultMiddleware) =>

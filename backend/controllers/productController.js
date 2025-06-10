@@ -1,6 +1,7 @@
 import slugify from "slugify";
 import Product from "../models/Product.js";
 import mongoose from "mongoose";
+import cloudinary from "../config/cloudinary.js";
 
 export const createProduct = async (req, res) => {
   try {
@@ -55,8 +56,8 @@ export const createProduct = async (req, res) => {
       createdBy: req.user.id,
     });
 
-    const saved = await product.save();
-    res.status(201).json({ success: true, data: saved });
+    await product.save();
+    res.status(201).json({ success: true, product, message:"Product Created Successfully." });
   } catch (error) {
     res
       .status(500)
@@ -250,21 +251,72 @@ export const getAllProductsAdmin = async (req, res) => {
 
 export const getAllProductsBySeller = async (req, res) => {
   try {
-    // Validate user is authenticated
-    if (!req.user.role || req.user.role !== "seller") {
-      console.error("Unauthorized access attempt:", req.user);
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access." });
-    }
     const sellerId = req.user._id;
-    const { page = 1, limit = 10 } = req.query;
     const query = { createdBy: sellerId };
+    const {
+      search,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 10,
+      sort = "latest",
+    } = req.query;
+    console.log("Raw Query Parameters:", req.query);
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    // Filter by category
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid category ID." });
+      }
+      query.category = category;
+    }
+    // Filter by brand
+    if (brand) {
+      query.brand = { $regex: brand, $options: "i" };
+    }
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) {
+        const min = Number(minPrice);
+        if (isNaN(min)) {
+          return res.status(400).json({
+            success: false,
+            message: "minPrice must be a valid number",
+          });
+        }
+        query.price.$gte = min;
+      }
+      if (maxPrice) {
+        const max = Number(maxPrice);
+        if (isNaN(max)) {
+          return res.status(400).json({
+            success: false,
+            message: "maxPrice must be a valid number",
+          });
+        }
+        query.price.$lte = max;
+      }
+    }
+    console.log("Final Query Object:", query);
+    // Sorting
+    let sortOption = { createdAt: -1 }; // default: latest first
+    if (sort === "price_asc") sortOption = { price: 1 };
+    else if (sort === "price_desc") sortOption = { price: -1 };
+    else if (sort === "popular") sortOption = { ratingsAverage: -1 };
+    
     const total = await Product.countDocuments(query);
     const products = await Product.find
       (query)
-      .populate("category", "name")
-      .sort({ createdAt: -1 })
+      .populate("category")
+      .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit));
     res.json({
@@ -394,6 +446,17 @@ export const deleteProduct = async (req, res) => {
           success: false,
           message: "Not authorized to delete this product.",
         });
+    }
+
+    // Delete each image from Cloudinary
+    for (const img of product.images) {
+      if(img.publicId){
+        await cloudinary.uploader.destroy(img.publicId, {
+        invalidate: true,
+        resource_type: 'image',
+      });
+      // console.log("Image deleted:", img.publicId)
+      }
     }
     // permanently delete
     await Product.findByIdAndDelete(req.params.id);

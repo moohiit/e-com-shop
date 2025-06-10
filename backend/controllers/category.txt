@@ -1,0 +1,51 @@
+import { Product }  from './models/Product';
+import { Category } from './models/Category';
+
+async function getFullCategoryChain(productId) {
+  // 1) Load the product
+  const prod = await Product.findById(productId).exec();
+  if (!prod) throw new Error('Product not found');
+
+  // 2) Load its category document
+  const leaf = await Category.findById(prod.category).exec();
+  if (!leaf) throw new Error('Category not found');
+
+  // 3) Build a list: leaf + all its ancestors
+  const chainIds = [ ...leaf.ancestors, leaf._id ];
+
+  // 4) Fetch their names (in order)
+  const chain = await Category
+    .find({ _id: { $in: chainIds } })
+    .sort({ /* preserve your hierarchy order if needed */ })
+    .lean()
+    .exec();
+
+  return chain; // array of { _id, name, parent, ancestors }
+}
+
+[ 
+  { _id: “A”, name: “Clothing”, parent: null, ancestors: [] },
+  { _id: “B”, name: “Men”,      parent: “A”, ancestors: [“A”] },
+  { _id: “C”, name: “Shirts”,   parent: “B”, ancestors: [“A”,”B”] }
+]
+
+
+async function getProductsUnder(categoryId) {
+  // 1) Grab every category whose ancestors include categoryId
+  const children = await Category
+    .find({ ancestors: categoryId }, '_id')
+    .lean();
+
+  // 2) Collect their IDs + the categoryId itself
+  const allIds = children.map(c => c._id).concat(categoryId);
+
+  // 3) Fetch products in any of those
+  return Product.find({ category: { $in: allIds } }).exec();
+}
+
+
+Clothing (root)
+ ├── Men (id=B)
+ │     └── Shirts (id=C1)
+ └── Women (id=D)
+       └── Shirts (id=C2)
