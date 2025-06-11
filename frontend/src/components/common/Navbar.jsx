@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useTheme } from "../../theme/ThemeProvider";
 import { motion } from "framer-motion";
+import logo from "../../assets/Logo/logo.png";
 import {
   FaShoppingCart,
   FaHeart,
@@ -35,10 +36,10 @@ const Navbar = () => {
 
   const handleLogout = () => {
     try {
-      dispatch(logoutUser())
-      navigate('/auth/login', { replace: true })
+      dispatch(logoutUser());
+      navigate("/auth/login", { replace: true });
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
   };
 
@@ -63,19 +64,29 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed w-full z-50 transition-all duration-300 ${scrolled
+      className={`fixed w-full z-50 transition-all duration-300 ${
+        scrolled
           ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
           : "bg-white dark:bg-gray-900"
-        }`}
+      }`}
     >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <motion.div whileHover={{ scale: 1.05 }}>
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                ShopEase
-              </span>
+              <motion.img
+                src={logo}
+                alt="E-commerce Illustration"
+                className="w-12 drop-shadow-2xl bg-transparent dark:bg-transparent"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                style={{
+                  backgroundColor: "transparent",
+                  // Ensure no other background styles interfere
+                }}
+              />
             </Link>
           </motion.div>
 
@@ -86,9 +97,10 @@ const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) =>
-                  `flex items-center text-sm font-medium transition-colors ${isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  `flex items-center text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
                   }`
                 }
               >
@@ -143,7 +155,7 @@ const Navbar = () => {
                 <button className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   <FaUser size={16} />
                   <span className="font-medium">
-                    {(user?.name)?.split(" ")[0] || "Unknown"}
+                    {user?.name?.split(" ")[0] || "Unknown"}
                   </span>
                 </button>
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200">
@@ -230,9 +242,10 @@ const Navbar = () => {
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 ${isActive
-                      ? "font-medium text-blue-600 dark:text-blue-400"
-                      : ""
+                    `flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 ${
+                      isActive
+                        ? "font-medium text-blue-600 dark:text-blue-400"
+                        : ""
                     }`
                   }
                 >
