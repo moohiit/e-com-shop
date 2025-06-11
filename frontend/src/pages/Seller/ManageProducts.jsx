@@ -28,6 +28,7 @@ function ManageProducts() {
 
   const { data, isLoading, isError, refetch } =
     useFetchAllProductsSellerQuery(filters);
+    console.log("Resposne: ", data)
   const [deleteProduct] = useDeleteProductMutation();
   const [toggleProduct] = useToggleProductMutation();
 
@@ -186,7 +187,7 @@ function ManageProducts() {
                   {product.brand}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
-                  {product.category.name}
+                  {product?.category?.name || "Unknown"}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
                   {product.stock}

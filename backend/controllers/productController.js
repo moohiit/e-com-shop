@@ -81,7 +81,7 @@ export const getAllProducts = async (req, res) => {
       sort = "latest",
     } = req.query;
 
-    console.log("Raw Query Parameters:", req.query);
+    // console.log("Raw Query Parameters:", req.query);
 
     const query = { isActive: true };
 
@@ -127,7 +127,7 @@ export const getAllProducts = async (req, res) => {
       }
     }
 
-    console.log("Final Query Object:", query);
+    // console.log("Final Query Object:", query);
 
     // Sorting
     let sortOption = { createdAt: -1 }; // default: latest first
@@ -174,7 +174,7 @@ export const getAllProductsAdmin = async (req, res) => {
       limit = 10,
       sort = "latest",
     } = req.query;
-    console.log("Raw Query Parameters:", req.query);
+    // console.log("Raw Query Parameters:", req.query);
     const query = {};
     // Search by name
     if (search) {
@@ -217,7 +217,7 @@ export const getAllProductsAdmin = async (req, res) => {
         query.price.$lte = max;
       }
     }
-    console.log("Final Query Object:", query);
+    // console.log("Final Query Object:", query);
     // Sorting
     let sortOption = { createdAt: -1 }; // default: latest first
     if (sort === "price_asc") sortOption = { price: 1 };
@@ -263,7 +263,7 @@ export const getAllProductsBySeller = async (req, res) => {
       limit = 10,
       sort = "latest",
     } = req.query;
-    console.log("Raw Query Parameters:", req.query);
+    // console.log("Raw Query Parameters:", req.query);
     // Search by name
     if (search) {
       query.name = { $regex: search, $options: "i" };
@@ -305,7 +305,7 @@ export const getAllProductsBySeller = async (req, res) => {
         query.price.$lte = max;
       }
     }
-    console.log("Final Query Object:", query);
+    // console.log("Final Query Object:", query);
     // Sorting
     let sortOption = { createdAt: -1 }; // default: latest first
     if (sort === "price_asc") sortOption = { price: 1 };
