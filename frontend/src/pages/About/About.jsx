@@ -1,6 +1,8 @@
+import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
 function About() {
+  const user = useSelector((state) => state.auth.user);
   return (
     <div className="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
       {/* Hero Section */}
@@ -62,9 +64,9 @@ function About() {
           <h2 className="text-2xl font-bold mb-6">Meet the Team</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
             {[
-              { name: "Mohit Patel", role: "Founder & CEO", image:"https://avatars.githubusercontent.com/u/109367447?v=4" },
-              { name: "Prahlad Singh", role: "CTO", image:"https://avatars.githubusercontent.com/u/109367447?v=4" },
-              { name: "Rahul Verma", role: "Lead Designer", image:"https://avatars.githubusercontent.com/u/109367447?v=4" },
+              { name: "Mohit Patel", role: "Founder & CEO", image: "https://avatars.githubusercontent.com/u/109367447?v=4" },
+              { name: "Prahlad Singh", role: "CTO", image: "https://avatars.githubusercontent.com/u/109367447?v=4" },
+              { name: "Rahul Verma", role: "Lead Designer", image: "https://avatars.githubusercontent.com/u/109367447?v=4" },
             ].map((member) => (
               <div
                 key={member.name}
@@ -92,12 +94,18 @@ function About() {
           Whether you're a customer looking for great deals or a seller ready to
           grow your business — ShopEase is here for you.
         </p>
-        <Link
+        {user ? (<Link
+          to="/profile"
+          className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+        >
+          Get Started
+        </Link>) : (<Link
           to="/auth/register"
           className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
         >
           Get Started
-        </Link>
+        </Link>)}
+
       </section>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
-  restoreUser,
+  toggleUser,
 } from '../controllers/adminController.js';
 import { protect, isAdmin } from '../middleware/authMiddleware.js';
 
@@ -13,10 +13,10 @@ const router = express.Router();
 router.use(protect, isAdmin); // ✅ apply middleware to all routes below
 
 router.get('/users', getAllUsers);
-router.get('/users/:id', getUserById);
+router.get('/user/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
-router.patch('/users/:id/restore', restoreUser); // PATCH for reactivation
+router.patch('/users/:id/toggle', toggleUser); // PATCH for reactivation
 
 
 export default router;

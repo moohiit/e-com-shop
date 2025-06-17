@@ -17,7 +17,7 @@ export default function AdminCategories() {
         </button>
       </div>
 
-      <CategoryList />
+      <CategoryList isAdmin={true} />
 
       {showModal && <AddCategoryModal onClose={() => setShowModal(false)} />}
     </div>
