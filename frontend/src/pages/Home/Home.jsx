@@ -93,13 +93,13 @@ function Home() {
               </div>
               <div className="space-x-4">
                 <Link
-                  to="/dashboard/products"
+                  to="/seller/products"
                   className="inline-flex items-center bg-white text-amber-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-medium shadow transition-all"
                 >
                   Manage Products
                 </Link>
                 <Link
-                  to="/dashboard/analytics"
+                  to="/seller/dashboard"
                   className="inline-flex items-center bg-transparent border-2 border-white hover:bg-white hover:text-amber-600 px-6 py-3 rounded-lg font-medium transition-all"
                 >
                   View Analytics

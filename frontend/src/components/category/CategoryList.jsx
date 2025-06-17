@@ -8,9 +8,8 @@ import { useState } from "react";
 import AddCategoryModal from "../../modals/AddCategoryModal";
 import toast from "react-hot-toast";
 
-export default function CategoryList() {
+export default function CategoryList({ isAdmin = false }) {
   const { data: response, isLoading, error } = useFetchAllCategoriesQuery();
-  console.log(error)
   const [deleteCategory] = useDeleteCategoryMutation();
   const [toggleCategory] = useToggleCategoryMutation();
 
@@ -131,19 +130,18 @@ export default function CategoryList() {
               <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
                 {Array.isArray(cat.parents) && cat.parents.length > 0
                   ? cat.parents
-                      .map((p) => p?.name)
-                      .filter(Boolean)
-                      .join(", ")
+                    .map((p) => p?.name)
+                    .filter(Boolean)
+                    .join(", ")
                   : "—"}
               </td>
               <td className="p-2 border-b dark:border-gray-700">
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-semibold
-                  ${
-                    cat.isActive
+                  ${cat.isActive
                       ? "bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900"
                       : "bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900"
-                  }`}
+                    }`}
                 >
                   {cat.isActive ? "Active" : "Inactive"}
                 </span>
@@ -155,19 +153,19 @@ export default function CategoryList() {
                 >
                   Edit
                 </button>
-                <button
+                {isAdmin && <button
                   onClick={() => handleDelete(cat._id)}
                   className="bg-red-100 text-red-700 dark:bg-red-200 dark:text-red-900 px-2 py-1 rounded text-xs font-semibold hover:bg-red-200 dark:hover:bg-red-300"
                 >
                   Delete
                 </button>
+                }
                 <button
                   onClick={() => handleToggle(cat._id)}
                   className={`px-2 py-1 rounded text-xs font-semibold
-                    ${
-                      cat.isActive
-                        ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900 dark:hover:bg-red-300"
-                        : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900 dark:hover:bg-green-300"
+                    ${cat.isActive
+                      ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900 dark:hover:bg-red-300"
+                      : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900 dark:hover:bg-green-300"
                     }`}
                 >
                   {cat.isActive ? "Deactivate" : "Activate"}

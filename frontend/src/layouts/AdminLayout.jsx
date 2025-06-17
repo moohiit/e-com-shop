@@ -18,7 +18,6 @@ export default function AdminLayout() {
     { to: '/admin/users', label: 'Manage Users' },
     { to: '/admin/products', label: 'Manage Products' },
     { to: '/admin/categories', label: 'Manage Categories' },
-    { to: '/admin/orders', label: 'Manage Orders' },
   ]
 
   const handleLogout = async () => {

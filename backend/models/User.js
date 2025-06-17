@@ -8,8 +8,8 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     profileImage: {
-      imageUrl: { type: String, required: true },
-      publicId: { type: String, required: true },
+      imageUrl: { type: String },
+      publicId: { type: String },
     },
     role: {
       type: String,
