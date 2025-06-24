@@ -35,7 +35,7 @@ router.get('/count', getProductCount);
 router.get('/:id', getProductById);
 
 // Update product
-router.put('/:id', protect, isSeller, updateProduct);
+router.put('/:id', protect, isSellerOrAdmin, updateProduct);
 
 // Soft delete product
 router.delete('/:id', protect, isSellerOrAdmin, deleteProduct);

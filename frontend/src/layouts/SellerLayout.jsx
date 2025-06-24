@@ -63,7 +63,7 @@ export default function SellerLayout() {
           ))}
           <button
             onClick={handleLogout}
-            className="mt-8 flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded-md"
+            className="mt-8 flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-transparent hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-700 dark:hover:text-white rounded-md transition-colors"
           >
             <LogOut size={16} /> Logout
           </button>
