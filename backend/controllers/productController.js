@@ -28,12 +28,10 @@ export const createProduct = async (req, res) => {
       !images ||
       !category
     ) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "All required fields must be filled.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "All required fields must be filled.",
+      });
     }
 
     const existing = await Product.findOne({ slug });
@@ -57,14 +55,16 @@ export const createProduct = async (req, res) => {
     });
 
     await product.save();
-    res.status(201).json({ success: true, product, message:"Product Created Successfully." });
+    res.status(201).json({
+      success: true,
+      product,
+      message: "Product Created Successfully.",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Internal server error.",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
   }
 };
 
@@ -225,8 +225,7 @@ export const getAllProductsAdmin = async (req, res) => {
     else if (sort === "popular") sortOption = { ratingsAverage: -1 };
     // Pagination
     const total = await Product.countDocuments(query);
-    const products = await Product.find
-      (query)
+    const products = await Product.find(query)
       .populate("category")
       .sort(sortOption)
       .skip((page - 1) * limit)
@@ -247,7 +246,7 @@ export const getAllProductsAdmin = async (req, res) => {
       message: error.message || "Internal server error.",
     });
   }
-}
+};
 
 export const getAllProductsBySeller = async (req, res) => {
   try {
@@ -311,10 +310,9 @@ export const getAllProductsBySeller = async (req, res) => {
     if (sort === "price_asc") sortOption = { price: 1 };
     else if (sort === "price_desc") sortOption = { price: -1 };
     else if (sort === "popular") sortOption = { ratingsAverage: -1 };
-    
+
     const total = await Product.countDocuments(query);
-    const products = await Product.find
-      (query)
+    const products = await Product.find(query)
       .populate("category")
       .sort(sortOption)
       .skip((page - 1) * limit)
@@ -357,12 +355,10 @@ export const getProductById = async (req, res) => {
 
     res.json({ success: true, data: product });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Internal server error.",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
   }
 };
 
@@ -376,13 +372,14 @@ export const updateProduct = async (req, res) => {
         .json({ success: false, message: "Product not found" });
     }
 
-    if (product.createdBy.toString() !== req.user._id.toString()) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Not authorized to update this product",
-        });
+    if (
+      product.createdBy.toString() !== req.user._id.toString() && // Not the author
+      req.user.role !== "admin" // Also not an admin
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this product",
+      });
     }
 
     const updatableFields = [
@@ -429,45 +426,39 @@ export const deleteProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (!product) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Product not found or already deleted.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found or already deleted.",
+      });
     }
     if (
       product.createdBy.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Not authorized to delete this product.",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this product.",
+      });
     }
 
     // Delete each image from Cloudinary
     for (const img of product.images) {
-      if(img.publicId){
+      if (img.publicId) {
         await cloudinary.uploader.destroy(img.publicId, {
-        invalidate: true,
-        resource_type: 'image',
-      });
-      // console.log("Image deleted:", img.publicId)
+          invalidate: true,
+          resource_type: "image",
+        });
+        // console.log("Image deleted:", img.publicId)
       }
     }
     // permanently delete
     await Product.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: "Product deleted permanently." });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Internal server error.",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
   }
 };
 
@@ -479,12 +470,10 @@ export const toggleProductStatus = async (req, res) => {
       product.createdBy.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Not authorized to change product status.",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to change product status.",
+      });
     }
 
     product.isActive = !product.isActive;
@@ -497,12 +486,10 @@ export const toggleProductStatus = async (req, res) => {
       data: product,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Internal server error.",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
   }
 };
 
@@ -532,21 +519,17 @@ export const getProductsByCategory = async (req, res) => {
       .sort({ createdAt: -1 });
 
     if (products.length === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No products found in this category.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No products found in this category.",
+      });
     }
 
     res.json({ success: true, data: products });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Internal server error.",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
   }
 };

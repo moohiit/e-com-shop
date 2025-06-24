@@ -45,14 +45,19 @@ const adminApiSlice = apiSlice.injectEndpoints({
         { type: "User" },
       ],
     }),
+    adminGetDashboardData: builder.query({
+      query: () => "/admin/dashboard",
+      providesTags: ["Dashboard"],
+    }),
   }),
 });
 
 
-export const { 
+export const {
   useAdminGetAllUsersQuery,
   useAdminGetUserByIdQuery,
   useAdminUpdateUserMutation,
   useAdminDeleteUserMutation,
-  useAdminToggleUserMutation
+  useAdminToggleUserMutation,
+  useAdminGetDashboardDataQuery
 } = adminApiSlice;

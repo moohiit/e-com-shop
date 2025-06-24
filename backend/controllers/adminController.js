@@ -1,4 +1,7 @@
+import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Category from "../models/Category.js";
+// import Order from "../models/Order.js";
 
 // @desc    Get all users (admin only)
 // @route   GET /api/admin/users
@@ -144,4 +147,131 @@ export const toggleUser = async (req, res) => {
         : "User deactivated Succcessfully"
     }`,
   });
+};
+
+// @desc    Get dashboard data (admin only)
+// @route   GET /api/admin/dashboard
+// @access  Private/Admin
+export const getDashboardData = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+
+    // ===========================
+    // 1. Aggregate User Counts
+    // ===========================
+    const userCounts = await User.aggregate([
+      {
+        $facet: {
+          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
+          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
+          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          all: [{ $count: "count" }],
+        },
+      },
+    ]);
+
+    // ===========================
+    // 2. Aggregate Product Counts
+    // ===========================
+    const productCounts = await Product.aggregate([
+      {
+        $facet: {
+          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
+          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
+          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          all: [{ $count: "count" }],
+        },
+      },
+    ]);
+
+    // ===========================
+    // 3. Aggregate Category Counts
+    // ===========================
+    const categoryCounts = await Category.aggregate([
+      {
+        $facet: {
+          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
+          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
+          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          all: [{ $count: "count" }],
+        },
+      },
+    ]);
+
+    // ===========================
+    // 4. Aggregate Orders and Revenue
+    // ===========================
+    // const orderStats = await Order.aggregate([
+    //   {
+    //     $facet: {
+    //       today: [
+    //         { $match: { createdAt: { $gte: today } } },
+    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+    //       ],
+    //       month: [
+    //         { $match: { createdAt: { $gte: startOfMonth } } },
+    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+    //       ],
+    //       year: [
+    //         { $match: { createdAt: { $gte: startOfYear } } },
+    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+    //       ],
+    //       all: [
+    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+    //       ],
+    //     },
+    //   },
+    // ]);
+
+    const users = userCounts[0];
+    const products = productCounts[0];
+    const categories = categoryCounts[0];
+    // const orders = orderStats[0];
+
+    const formatCount = (data, key) => (data[key][0]?.count || 0);
+    const formatRevenue = (data, key) => (data[key][0]?.revenue || 0);
+
+    res.json({
+      success: true,
+      data: {
+        today: {
+          users: formatCount(users, 'today'),
+          products: formatCount(products, 'today'),
+          categories: formatCount(categories, 'today'),
+          // orders: formatCount(orders, 'today'),
+          // revenue: formatRevenue(orders, 'today'),
+        },
+        month: {
+          users: formatCount(users, 'month'),
+          products: formatCount(products, 'month'),
+          categories: formatCount(categories, 'month'),
+          // orders: formatCount(orders, 'month'),
+          // revenue: formatRevenue(orders, 'month'),
+        },
+        year: {
+          users: formatCount(users, 'year'),
+          products: formatCount(products, 'year'),
+          categories: formatCount(categories, 'year'),
+          // orders: formatCount(orders, 'year'),
+          // revenue: formatRevenue(orders, 'year'),
+        },
+        all: {
+          users: formatCount(users, 'all'),
+          products: formatCount(products, 'all'),
+          categories: formatCount(categories, 'all'),
+          // orders: formatCount(orders, 'all'),
+          // revenue: formatRevenue(orders, 'all'),
+        },
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal Server Error',
+    });
+  }
 };

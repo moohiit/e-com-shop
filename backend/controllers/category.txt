@@ -49,3 +49,6 @@ Clothing (root)
  │     └── Shirts (id=C1)
  └── Women (id=D)
        └── Shirts (id=C2)
+
+VITE_RAZORPAY_KEY_ID=rzp_test_0A1bvJl6A1wScm
+VITE_RAZORPAY_KEY_SECRET=Fl8owredjWt0UhPhcpPz9DYR
