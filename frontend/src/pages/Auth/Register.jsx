@@ -16,7 +16,7 @@ const Register = () => {
     try {
       await registerUser(data).unwrap();
       toast.success('Registered successfully!');
-      navigate('/auth/login');
+      navigate('/verify-notice', { state: { email: data.user.email } });
     } catch (err) {
       toast.error(err.data?.message || 'Registration failed');
     }

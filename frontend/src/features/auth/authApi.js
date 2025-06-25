@@ -17,6 +17,13 @@ const authApiSlice = apiSlice.injectEndpoints({
         body: credentials,
       }),
     }),
+    resendVerification: builder.mutation({
+      query: ({ email }) => ({
+        url: "/auth/resend-verification",
+        method: "POST",
+        body: { email },
+      }),
+    }),
     verifyEmail: builder.mutation({
       query: (token) => ({
         url: `/auth/verify-email/${token}`,
@@ -83,6 +90,13 @@ const authApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
+    sendContactMessage: builder.mutation({
+      query: (data) => ({
+        url: '/auth/contact',
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -90,6 +104,7 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useVerifyEmailMutation,
+  useResendVerificationMutation,
   useLogoutMutation,
   useRefreshMutation,
   useForgotPasswordMutation,
@@ -100,4 +115,5 @@ export const {
   useGetAllUsersQuery,
   useUpdateUserMutation,
   useDeleteUserMutation,
+  useSendContactMessageMutation,
 } = authApiSlice;
