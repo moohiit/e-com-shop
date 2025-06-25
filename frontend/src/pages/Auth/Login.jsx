@@ -1,34 +1,60 @@
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { useLoginMutation } from "../../features/auth/authApi";
+import { useLoginMutation, useResendVerificationMutation } from "../../features/auth/authApi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../features/auth/authSlice";
+import { useState } from "react";
 
 const Login = () => {
   const [login, { isLoading }] = useLoginMutation();
+  const [resendVerification, { isLoading: isResending }] = useResendVerificationMutation();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const [showResend, setShowResend] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
 
   const onSubmit = async (data) => {
     try {
       const response = await login(data).unwrap();
+
       if (!response || !response.success) {
         throw new Error("Login failed, please try again.");
       }
-      // console.log("Login response:", response.user);
-      // Assuming response contains user info and token
+
       dispatch(loginSuccess(response));
-      toast.success(response.message || "Logged in!");
-      navigate("/"); 
+      toast.success(response.message || "Logged in successfully!");
+      navigate("/");
+
     } catch (err) {
-      toast.error(err?.message || err.response.message || "Login failed");
+      const backendError = err?.data?.message || err?.message || "Login failed";
+
+      toast.error(backendError);
+
+      // Handle unverified email
+      if (err?.data?.allowResend && data.email) {
+        setShowResend(true);
+        setResendEmail(data.email);
+      }
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await resendVerification({ email: resendEmail }).unwrap();
+      toast.success("Verification email resent successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.data?.message || "Failed to resend verification email.");
     }
   };
 
@@ -62,9 +88,7 @@ const Login = () => {
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.password && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.password.message}
-            </p>
+            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
           )}
         </div>
 
@@ -78,6 +102,19 @@ const Login = () => {
           {isLoading ? "Logging in..." : "Login"}
         </motion.button>
       </form>
+
+      {showResend && (
+        <div className="mt-6 flex flex-col items-center">
+          <p className="text-red-500 mb-2 text-center">Your email is not verified.</p>
+          <button
+            onClick={handleResend}
+            disabled={isResending}
+            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded disabled:opacity-50"
+          >
+            {isResending ? "Resending..." : "Resend Verification Email"}
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 };

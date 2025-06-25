@@ -52,3 +52,6 @@ Clothing (root)
 
 VITE_RAZORPAY_KEY_ID=rzp_test_0A1bvJl6A1wScm
 VITE_RAZORPAY_KEY_SECRET=Fl8owredjWt0UhPhcpPz9DYR
+EMAIL_USER=mohit.patel.edu@gmail.com
+CONTACT_EMAIL=pmohit645@gmail.com
+EMAIL_PASS=ysxycippeuxpxgtg

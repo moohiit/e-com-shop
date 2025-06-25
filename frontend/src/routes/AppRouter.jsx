@@ -6,7 +6,11 @@ import ProtectedRoute from "./ProtectedRoute";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import SellerLayout from "../layouts/SellerLayout";
 import RoleBasedRedirect from "./RoleBasedRedirect";
-import AdminLayout from '../layouts/AdminLayout'
+import AdminLayout from "../layouts/AdminLayout";
+import VerifyNotice from "../pages/Email/VerifyNotice";
+import VerifyEmail from "../pages/Email/VerifyEmail";
+import EmailVerifiedSuccess from "../pages/Email/EmailVerifiedSuccess";
+import EmailVerificationFailed from "../pages/Email/EmailVerificationFailed";
 
 const Home = lazy(() => import("../pages/Home/Home"));
 const ProductListing = lazy(() => import("../pages/Products/ProductListing"));
@@ -27,10 +31,10 @@ const AddProduct = lazy(() => import("../pages/Seller/AddProduct"));
 const ManageOrders = lazy(() => import("../pages/Seller/ManageOrders"));
 const ManageCategories = lazy(() => import("../pages/Seller/ManageCategories"));
 const NotFound = lazy(() => import("../pages/NotFound/NotFound"));
-const AdminDashboard = lazy(() => import('../pages/Admin/AdminDashboard'))
-const ManageUsers = lazy(() => import('../pages/Admin/ManageUsers'))
-const AdminProducts = lazy(() => import('../pages/Admin/AdminProducts'))
-const AdminCategories = lazy(() => import('../pages/Admin/AdminCategories'))
+const AdminDashboard = lazy(() => import("../pages/Admin/AdminDashboard"));
+const ManageUsers = lazy(() => import("../pages/Admin/ManageUsers"));
+const AdminProducts = lazy(() => import("../pages/Admin/AdminProducts"));
+const AdminCategories = lazy(() => import("../pages/Admin/AdminCategories"));
 export function AppRouter() {
   return (
     <Suspense fallback={<LoadingSpinner fullScreen />}>
@@ -51,7 +55,11 @@ export function AppRouter() {
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
           {/* Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={["user", "seller", "admin"]} />}>
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={["user", "seller", "admin"]} />
+            }
+          >
             <Route path="profile" element={<Profile />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
@@ -73,7 +81,7 @@ export function AppRouter() {
           </Route>
         </Route>
         {/* Admin Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<ManageUsers />} />
@@ -81,6 +89,11 @@ export function AppRouter() {
             <Route path="categories" element={<AdminCategories />} />
           </Route>
         </Route>
+
+        <Route path="/verify-notice" element={<VerifyNotice />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/email-verified-success" element={<EmailVerifiedSuccess />} />
+        <Route path="/email-verification-failed" element={<EmailVerificationFailed />} />
         {/* Catch-all for 404 */}
         <Route path="*" element={<NotFound />} />
         {/* Fallback route */}

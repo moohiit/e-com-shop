@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { useSendContactMessageMutation } from '../../features/auth/authApi';
+
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -9,17 +12,29 @@ function Contact() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [sendMessage, { isLoading }] = useSendContactMessageMutation();
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you could send data to an API or email service
-    console.log('Contact Form Submitted:', formData);
-    setSubmitted(true);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+
+    try {
+      const response = await sendMessage(formData).unwrap();
+
+      if (response.success) {
+        setSubmitted(true);
+        toast.success('Message sent successfully!');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        toast.error(response.message || 'Failed to send message.');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error(error?.data?.message || 'Something went wrong!');
+    }
   };
 
   return (
@@ -38,18 +53,10 @@ function Contact() {
         <div>
           <h2 className="text-2xl font-semibold mb-4">Contact Information</h2>
           <ul className="space-y-4 text-gray-600 dark:text-gray-300">
-            <li>
-              <strong>Email:</strong> support@shopease.com
-            </li>
-            <li>
-              <strong>Phone:</strong> +1 (800) 123-4567
-            </li>
-            <li>
-              <strong>Location:</strong> 123 E-Commerce Blvd, Tech City, USA
-            </li>
-            <li>
-              <strong>Hours:</strong> Mon–Fri, 9 AM – 6 PM
-            </li>
+            <li><strong>Email:</strong> support@shopease.com</li>
+            <li><strong>Phone:</strong> +91 7060993826</li>
+            <li><strong>Location:</strong> 123 E-Commerce Blvd, Tech City, USA</li>
+            <li><strong>Hours:</strong> Mon–Fri, 9 AM – 6 PM</li>
           </ul>
         </div>
 
@@ -58,7 +65,9 @@ function Contact() {
           <h2 className="text-2xl font-semibold mb-2">Send Us a Message</h2>
 
           {submitted && (
-            <p className="text-green-600 dark:text-green-400 font-medium">Thanks! We’ll be in touch soon.</p>
+            <p className="text-green-600 dark:text-green-400 font-medium">
+              Thanks! We’ll be in touch soon.
+            </p>
           )}
 
           <input
@@ -103,9 +112,10 @@ function Contact() {
 
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            disabled={isLoading}
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50"
           >
-            Send Message
+            {isLoading ? 'Sending...' : 'Send Message'}
           </button>
         </form>
       </section>
