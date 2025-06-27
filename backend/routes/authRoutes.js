@@ -5,7 +5,10 @@ import {
   logoutUser,
   verifyEmail,
   resendVerificationEmail,
-  contactFormSubmission
+  contactFormSubmission,
+  sendOtp,
+  verifyOtp,
+  resetPassword
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -16,5 +19,8 @@ router.get("/logout", logoutUser);
 
 router.get('/verify-email/:token', verifyEmail);
 router.post('/resend-verification', resendVerificationEmail);
+router.post('/forgot-password', sendOtp);
+router.post('/verify-otp', verifyOtp);
+router.post('/reset-password', resetPassword);
 router.post('/contact', contactFormSubmission);
 export default router;

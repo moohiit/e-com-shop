@@ -12,7 +12,7 @@ function ManageUsers() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [order, setOrder] = useState("desc");
   const [page, setPage] = useState(1);
-  const limit = 5;
+  const limit = 10;
 
   const { data, isLoading, isError, error } = useAdminGetAllUsersQuery({
     keyword: search,

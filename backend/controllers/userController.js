@@ -44,13 +44,9 @@ export const updateUserProfile = async (req, res) => {
       }
     }
     // Update user fields
+    user.avatar = req.body.avatar || user.avatar; // Assuming avatar is a URL or path
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-
-    if (req.body.password) {
-      user.password = req.body.password; // Will be hashed via pre-save hook
-    }
-
     await user.save();
 
     res.json({
@@ -69,6 +65,34 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/users/profile/password
+export const changeUserPassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user || !user.isActive) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    // Check if current password matches
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
 
 // @desc    User Self-Deactivation 
 // @route   DELETE /api/users/profile

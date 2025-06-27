@@ -43,25 +43,42 @@ const authApiSlice = apiSlice.injectEndpoints({
         method: "GET",
       }),
     }),
-    forgotPassword: builder.mutation({
-      query: (email) => ({
+    sendOtp: builder.mutation({
+      query: (data) => ({
         url: "/auth/forgot-password",
         method: "POST",
-        body: { email },
+        body: data,
       }),
     }),
-    resetPassword: builder.mutation({
-      query: ({ token, password }) => ({
-        url: `/auth/reset-password/${token}`,
+
+    verifyOtp: builder.mutation({
+      query: (data) => ({
+        url: "/auth/verify-otp",
         method: "POST",
-        body: { password },
+        body: data,
+      }),
+    }),
+
+    resetPassword: builder.mutation({
+      query: (data) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body: data,
       }),
     }),
     updateProfile: builder.mutation({
       query: (userData) => ({
-        url: "/auth/profile",
+        url: "/user/profile",
         method: "PUT",
         body: userData,
+      }),
+      invalidatesTags: ["User"],
+    }),
+    updateProfliePassword: builder.mutation({
+      query: ({ currentPassword, newPassword }) => ({
+        url: "/user/profile/update-password",
+        method: "PUT",
+        body: { currentPassword, newPassword },
       }),
       invalidatesTags: ["User"],
     }),
@@ -92,8 +109,8 @@ const authApiSlice = apiSlice.injectEndpoints({
     }),
     sendContactMessage: builder.mutation({
       query: (data) => ({
-        url: '/auth/contact',
-        method: 'POST',
+        url: "/auth/contact",
+        method: "POST",
         body: data,
       }),
     }),
@@ -107,9 +124,11 @@ export const {
   useResendVerificationMutation,
   useLogoutMutation,
   useRefreshMutation,
-  useForgotPasswordMutation,
+  useSendOtpMutation,
+  useVerifyOtpMutation,
   useResetPasswordMutation,
   useUpdateProfileMutation,
+  useUpdateProfliePasswordMutation,
   useGetProfileQuery,
   // Admin hooks
   useGetAllUsersQuery,
