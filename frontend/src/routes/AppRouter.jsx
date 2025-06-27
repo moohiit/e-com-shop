@@ -11,6 +11,7 @@ import VerifyNotice from "../pages/Email/VerifyNotice";
 import VerifyEmail from "../pages/Email/VerifyEmail";
 import EmailVerifiedSuccess from "../pages/Email/EmailVerifiedSuccess";
 import EmailVerificationFailed from "../pages/Email/EmailVerificationFailed";
+import ForgotPassword from "../components/common/ForgotPassword";
 
 const Home = lazy(() => import("../pages/Home/Home"));
 const ProductListing = lazy(() => import("../pages/Products/ProductListing"));
@@ -43,6 +44,7 @@ export function AppRouter() {
         <Route path="/auth" element={<AuthLayout />}>
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
         </Route>
 
         {/* User Routes */}

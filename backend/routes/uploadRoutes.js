@@ -9,9 +9,7 @@ const router = express.Router();
 const getUploadFolder = (req, res, next) => {
   // Check in this order: query param -> header -> body -> default
   req.uploadFolder =
-    req.query.folder ||
-    req.headers["x-upload-folder"] ||
-    "others";
+    req.query.folder || req.headers["x-upload-folder"] || "others";
   next();
 };
 
@@ -41,8 +39,7 @@ router.post("/single", protect, getUploadFolder, (req, res, next) => {
 
     res.json({
       success: true,
-      imageUrl: req.file.path,
-      publicId: req.file.filename,
+      image: { imageUrl: req.file.path, publicId: req.file.filename },
       folder: req.uploadFolder,
     });
   });
@@ -86,36 +83,33 @@ router.post("/multiple", protect, getUploadFolder, (req, res, next) => {
 });
 
 // DELETE /api/upload/:publicId
-router.delete('/*publicId', protect, async (req, res) => {
+router.delete("/*publicId", protect, async (req, res) => {
   try {
-    const publicId = req.params.publicId; 
+    const publicId = req.params.publicId;
     // console.log(publicId);
-    const fullPublicId = publicId.join('/');
+    const fullPublicId = publicId.join("/");
     // console.log(fullPublicId);
 
     const result = await cloudinary.uploader.destroy(fullPublicId, {
       invalidate: true,
-      resource_type: 'image',
+      resource_type: "image",
     });
 
-    if (result.result !== 'ok') {
+    if (result.result !== "ok") {
       return res.status(400).json({
         success: false,
-        message: 'Delete failed: ' + (result.result || 'Unknown error'),
+        message: "Delete failed: " + (result.result || "Unknown error"),
       });
     }
 
-    res.json({ success: true, message: 'Image deleted' });
+    res.json({ success: true, message: "Image deleted" });
   } catch (error) {
-    console.error('Delete error:', error);
+    console.error("Delete error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error during deletion',
+      message: error.message || "Server error during deletion",
     });
   }
 });
-
-
-
 
 export default router;

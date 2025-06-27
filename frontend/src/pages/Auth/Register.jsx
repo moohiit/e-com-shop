@@ -29,7 +29,6 @@ const Register = () => {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-md mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
     >
-      <h2 className="text-2xl font-bold text-center mb-8">Create an Account</h2>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>

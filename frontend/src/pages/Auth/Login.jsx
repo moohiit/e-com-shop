@@ -1,15 +1,19 @@
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { useLoginMutation, useResendVerificationMutation } from "../../features/auth/authApi";
+import {
+  useLoginMutation,
+  useResendVerificationMutation,
+} from "../../features/auth/authApi";
 import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../features/auth/authSlice";
 import { useState } from "react";
 
 const Login = () => {
   const [login, { isLoading }] = useLoginMutation();
-  const [resendVerification, { isLoading: isResending }] = useResendVerificationMutation();
+  const [resendVerification, { isLoading: isResending }] =
+    useResendVerificationMutation();
 
   const {
     register,
@@ -34,7 +38,6 @@ const Login = () => {
       dispatch(loginSuccess(response));
       toast.success(response.message || "Logged in successfully!");
       navigate("/");
-
     } catch (err) {
       const backendError = err?.data?.message || err?.message || "Login failed";
 
@@ -54,7 +57,9 @@ const Login = () => {
       toast.success("Verification email resent successfully!");
     } catch (error) {
       console.error(error);
-      toast.error(error?.data?.message || "Failed to resend verification email.");
+      toast.error(
+        error?.data?.message || "Failed to resend verification email."
+      );
     }
   };
 
@@ -65,7 +70,6 @@ const Login = () => {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-md mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
     >
-      <h2 className="text-2xl font-bold text-center mb-8">Login</h2>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
@@ -88,7 +92,9 @@ const Login = () => {
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+            <p className="text-red-500 text-sm mt-1">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
@@ -105,7 +111,9 @@ const Login = () => {
 
       {showResend && (
         <div className="mt-6 flex flex-col items-center">
-          <p className="text-red-500 mb-2 text-center">Your email is not verified.</p>
+          <p className="text-red-500 mb-2 text-center">
+            Your email is not verified.
+          </p>
           <button
             onClick={handleResend}
             disabled={isResending}
