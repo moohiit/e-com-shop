@@ -1,16 +1,35 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = {
-  items: [],
-  totalQuantity: 0,
-  totalAmount: 0,
-  shippingAddress: null,
-  paymentMethod: null,
+const loadCartFromStorage = () => {
+  try {
+    const stored = localStorage.getItem("cart");
+    return stored
+      ? JSON.parse(stored)
+      : {
+          items: [],
+          totalQuantity: 0,
+          totalAmount: 0,
+          shippingAddress: null,
+          paymentMethod: null,
+        };
+  } catch {
+    return {
+      items: [],
+      totalQuantity: 0,
+      totalAmount: 0,
+      shippingAddress: null,
+      paymentMethod: null,
+    };
+  }
+};
+
+const saveCartToStorage = (state) => {
+  localStorage.setItem("cart", JSON.stringify(state));
 };
 
 const cartSlice = createSlice({
   name: "cart",
-  initialState,
+  initialState: loadCartFromStorage(),
   reducers: {
     addItem: (state, action) => {
       const existingItem = state.items.find(
@@ -23,37 +42,51 @@ const cartSlice = createSlice({
       }
       state.totalQuantity += 1;
       state.totalAmount += action.payload.price;
+      saveCartToStorage(state);
     },
     removeItem: (state, action) => {
       const existingItem = state.items.find(
         (item) => item._id === action.payload
       );
-      if (existingItem.quantity === 1) {
-        state.items = state.items.filter((item) => item._id !== action.payload);
-      } else {
-        existingItem.quantity -= 1;
+      if (existingItem) {
+        if (existingItem.quantity === 1) {
+          state.items = state.items.filter(
+            (item) => item._id !== action.payload
+          );
+        } else {
+          existingItem.quantity -= 1;
+        }
+        state.totalQuantity -= 1;
+        state.totalAmount -= existingItem.price;
+        saveCartToStorage(state);
       }
-      state.totalQuantity -= 1;
-      state.totalAmount -= existingItem.price;
     },
     deleteItem: (state, action) => {
       const itemToRemove = state.items.find(
         (item) => item._id === action.payload
       );
-      state.items = state.items.filter((item) => item._id !== action.payload);
-      state.totalQuantity -= itemToRemove.quantity;
-      state.totalAmount -= itemToRemove.price * itemToRemove.quantity;
+      if (itemToRemove) {
+        state.items = state.items.filter((item) => item._id !== action.payload);
+        state.totalQuantity -= itemToRemove.quantity;
+        state.totalAmount -= itemToRemove.price * itemToRemove.quantity;
+        saveCartToStorage(state);
+      }
     },
     saveShippingAddress: (state, action) => {
       state.shippingAddress = action.payload;
+      saveCartToStorage(state);
     },
     savePaymentMethod: (state, action) => {
       state.paymentMethod = action.payload;
+      saveCartToStorage(state);
     },
     clearCart: (state) => {
       state.items = [];
       state.totalQuantity = 0;
       state.totalAmount = 0;
+      state.shippingAddress = null;
+      state.paymentMethod = null;
+      saveCartToStorage(state);
     },
   },
 });
