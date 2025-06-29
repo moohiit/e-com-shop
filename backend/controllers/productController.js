@@ -138,7 +138,9 @@ export const getAllProducts = async (req, res) => {
     // Pagination
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate("category", "name")
+      .populate([{ path: "category", select: "name" },
+        {path: "createdBy", select: "name email"}
+      ])
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -226,7 +228,10 @@ export const getAllProductsAdmin = async (req, res) => {
     // Pagination
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate("category")
+      .populate([
+        { path: "category", select: "name" },
+        { path: "createdBy", select: "name email" },
+      ])
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -313,7 +318,10 @@ export const getAllProductsBySeller = async (req, res) => {
 
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate("category")
+      .populate([
+        { path: "category", select: "name" },
+        { path: "createdBy", select: "name email" },
+      ])
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -346,7 +354,9 @@ export const getProductById = async (req, res) => {
         .json({ success: false, message: "Invalid product ID." });
     }
 
-    const product = await Product.findById(id).populate("category");
+    const product = await Product.findById(id).populate([{ path: "category", select: "name" },
+      {path: "createdBy", select: "name email"}
+    ]);
     if (!product || !product.isActive) {
       return res
         .status(404)
@@ -391,8 +401,6 @@ export const updateProduct = async (req, res) => {
       "category",
       "stock",
       "images",
-      "ratingsAverage",
-      "numReviews",
     ];
 
     updatableFields.forEach((field) => {
@@ -515,7 +523,10 @@ export const getProductsByCategory = async (req, res) => {
       category: categoryId,
       isActive: true,
     })
-      .populate("category", "name")
+      .populate([
+        { path: "category", select: "name" },
+        { path: "createdBy", select: "name email" },
+      ])
       .sort({ createdAt: -1 });
 
     if (products.length === 0) {

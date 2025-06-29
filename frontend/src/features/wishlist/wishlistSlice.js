@@ -30,9 +30,13 @@ const wishlistSlice = createSlice({
       localStorage.setItem("wishlist", JSON.stringify(newState));
       return newState;
     },
+    clearWishlist: () => {
+      localStorage.removeItem("wishlist");
+      return [];
+    },
   },
 });
-
-export const { addToWishlist, removeFromWishlist, moveToCart } =
+export const selectWishlist = (state) => state.wishlist;
+export const { addToWishlist, removeFromWishlist, moveToCart, clearWishlist } =
   wishlistSlice.actions;
 export default wishlistSlice.reducer;
