@@ -16,6 +16,7 @@ import AccessDenied from '../../components/common/AccessDenied';
 function Cart() {
   const { user } = useSelector((state) => state.auth);
   const cartItems = useSelector(selectCartItems);
+  console.log('Cart Items:', cartItems);
   const totalAmount = useSelector(selectCartTotalAmount);
   const totalQuantity = useSelector(selectCartTotalQuantity);
 

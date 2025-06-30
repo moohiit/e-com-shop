@@ -9,7 +9,7 @@ const loadCartFromStorage = () => {
           items: [],
           totalQuantity: 0,
           totalAmount: 0,
-          shippingAddress: null,
+          shippingAddress: null, // Only the selected shipping address
           paymentMethod: null,
         };
   } catch {
@@ -41,7 +41,7 @@ const cartSlice = createSlice({
         state.items.push({ ...action.payload, quantity: 1 });
       }
       state.totalQuantity += 1;
-      state.totalAmount += action.payload.price;
+      state.totalAmount += (action.payload.discountPrice || action.payload.price);
       saveCartToStorage(state);
     },
     removeItem: (state, action) => {
@@ -57,7 +57,7 @@ const cartSlice = createSlice({
           existingItem.quantity -= 1;
         }
         state.totalQuantity -= 1;
-        state.totalAmount -= existingItem.price;
+        state.totalAmount -= (existingItem.discountPrice || existingItem.price);
         saveCartToStorage(state);
       }
     },
@@ -68,11 +68,12 @@ const cartSlice = createSlice({
       if (itemToRemove) {
         state.items = state.items.filter((item) => item._id !== action.payload);
         state.totalQuantity -= itemToRemove.quantity;
-        state.totalAmount -= itemToRemove.price * itemToRemove.quantity;
+        state.totalAmount -= (itemToRemove.discountPrice || itemToRemove.price) * itemToRemove.quantity;
         saveCartToStorage(state);
       }
     },
     saveShippingAddress: (state, action) => {
+      // Only save the selected shipping address (fetched from the API)
       state.shippingAddress = action.payload;
       saveCartToStorage(state);
     },

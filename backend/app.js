@@ -38,7 +38,17 @@ app.use('/api/user', userRoutes);
 // Import and use the image upload routes
 import uploadRoutes from './routes/uploadRoutes.js';
 app.use('/api/upload', uploadRoutes);
-
-
+// Import and use the address routes
+import addressRoutes from './routes/addressRoutes.js';
+app.use('/api/addresses', addressRoutes);
+// Import and use the order routes
+import orderRoutes from './routes/orderRoutes.js';
+app.use('/api/orders', orderRoutes);
+// Import and use the seller order routes
+import sellerOrderRoutes from './routes/sellerOrderRoutes.js';
+app.use('/api/seller-orders', sellerOrderRoutes);
+// Import and use the transaction routes
+import transactionRoutes from './routes/transactionRoutes.js';    
+app.use('/api/transactions', transactionRoutes);
 
 export default app;

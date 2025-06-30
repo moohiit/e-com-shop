@@ -50,7 +50,7 @@ const ProductCard = ({ product }) => {
             onClick={handleAddToWishlist}
             disabled={wishlistLoading}
             title="Add to Wishlist"
-            className="bg-white p-2 rounded-full hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+            className="bg-white p-2 rounded-full hover:bg-red-500 text-gray-500 hover:text-white transition-colors disabled:opacity-50"
           >
             <FaHeart />
           </button>
@@ -58,7 +58,7 @@ const ProductCard = ({ product }) => {
           <Link
             to={`/product/${product._id}`}
             title="View Details"
-            className="bg-white p-2 rounded-full hover:bg-green-500 hover:text-white transition-colors"
+            className="bg-white p-2 rounded-full hover:bg-green-500 text-gray-500 hover:text-white transition-colors"
           >
             <FaEye />
           </Link>
@@ -67,7 +67,7 @@ const ProductCard = ({ product }) => {
             onClick={handleAddToCart}
             disabled={cartLoading}
             title="Add to Cart"
-            className="bg-white p-2 rounded-full hover:bg-blue-500 hover:text-white transition-colors disabled:opacity-50"
+            className="bg-white p-2 rounded-full hover:bg-blue-500 text-gray-500 hover:text-white transition-colors disabled:opacity-50"
           >
             <FaShoppingCart />
           </button>
