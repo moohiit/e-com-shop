@@ -1,23 +1,18 @@
 import mongoose from 'mongoose';
 
-const orderSchema = new mongoose.Schema(
+const sellerOrderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
+    seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
-    orderItems: [
+    items: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Seller Info
       },
     ],
-
-    shippingAddress: { type: mongoose.Schema.Types.ObjectId, ref: 'Address', required: true },
-
-    paymentMethod: { type: String, required: true }, // COD, Razorpay, etc.
-    transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
 
     itemsPrice: { type: Number, required: true },
     shippingPrice: { type: Number, required: true },
@@ -27,12 +22,15 @@ const orderSchema = new mongoose.Schema(
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
 
-    sellerOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SellerOrder' }], // New Field
+    isDelivered: { type: Boolean, default: false },
+    deliveredAt: { type: Date },
 
     orderStatus: { type: String, enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Processing' },
+
+    transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }, // Seller-specific payment
   },
   { timestamps: true }
 );
 
-const Order = mongoose.model('Order', orderSchema);
-export default Order;
+const SellerOrder = mongoose.model('SellerOrder', sellerOrderSchema);
+export default SellerOrder;

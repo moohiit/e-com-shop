@@ -51,7 +51,7 @@ export const createProduct = async (req, res) => {
       stock,
       images: images || [],
       category,
-      createdBy: req.user.id,
+      seller: req.user.id,
     });
 
     await product.save();
@@ -139,7 +139,7 @@ export const getAllProducts = async (req, res) => {
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
       .populate([{ path: "category", select: "name" },
-        {path: "createdBy", select: "name email"}
+        {path: "seller", select: "name email"}
       ])
       .sort(sortOption)
       .skip((page - 1) * limit)
@@ -230,7 +230,7 @@ export const getAllProductsAdmin = async (req, res) => {
     const products = await Product.find(query)
       .populate([
         { path: "category", select: "name" },
-        { path: "createdBy", select: "name email" },
+        { path: "seller", select: "name email" },
       ])
       .sort(sortOption)
       .skip((page - 1) * limit)
@@ -246,6 +246,7 @@ export const getAllProductsAdmin = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error in getAllProductsAdmin:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error.",
@@ -256,7 +257,7 @@ export const getAllProductsAdmin = async (req, res) => {
 export const getAllProductsBySeller = async (req, res) => {
   try {
     const sellerId = req.user._id;
-    const query = { createdBy: sellerId };
+    const query = { seller: sellerId };
     const {
       search,
       category,
@@ -320,7 +321,7 @@ export const getAllProductsBySeller = async (req, res) => {
     const products = await Product.find(query)
       .populate([
         { path: "category", select: "name" },
-        { path: "createdBy", select: "name email" },
+        { path: "seller", select: "name email" },
       ])
       .sort(sortOption)
       .skip((page - 1) * limit)
@@ -355,7 +356,7 @@ export const getProductById = async (req, res) => {
     }
 
     const product = await Product.findById(id).populate([{ path: "category", select: "name" },
-      {path: "createdBy", select: "name email"}
+      {path: "seller", select: "name email"}
     ]);
     if (!product || !product.isActive) {
       return res
@@ -383,7 +384,7 @@ export const updateProduct = async (req, res) => {
     }
 
     if (
-      product.createdBy.toString() !== req.user._id.toString() && // Not the author
+      product.seller.toString() !== req.user._id.toString() && // Not the author
       req.user.role !== "admin" // Also not an admin
     ) {
       return res.status(403).json({
@@ -440,7 +441,7 @@ export const deleteProduct = async (req, res) => {
       });
     }
     if (
-      product.createdBy.toString() !== req.user._id.toString() &&
+      product.seller.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -463,6 +464,7 @@ export const deleteProduct = async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: "Product deleted permanently." });
   } catch (error) {
+    console.error("Error in deleteProduct:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error.",
@@ -475,7 +477,7 @@ export const toggleProductStatus = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (
-      product.createdBy.toString() !== req.user._id.toString() &&
+      product.seller.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -525,7 +527,7 @@ export const getProductsByCategory = async (req, res) => {
     })
       .populate([
         { path: "category", select: "name" },
-        { path: "createdBy", select: "name email" },
+        { path: "seller", select: "name email" },
       ])
       .sort({ createdAt: -1 });
 
