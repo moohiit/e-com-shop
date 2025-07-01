@@ -76,6 +76,8 @@ export function AppRouter() {
             <Route path="my-orders" element={<Orders />} />
             <Route path="order/:id" element={<OrderDetails />} />
             <Route path="order-success" element={<OrderSuccess />} />
+            <Route path="profile/addresses" element={<ManageAddresses />} />
+
           </Route>
         </Route>
 
