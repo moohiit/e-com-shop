@@ -22,7 +22,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
 
   const calculatePrices = () => {
     const itemsPrice = cartItems.reduce(
-      (acc, item) => acc + (item.discountPrice || item.price) * item.quantity,
+      (acc, item) => acc + item.discountPrice * item.quantity,
       0
     );
     const shippingPrice = itemsPrice > 500 ? 0 : 50;
@@ -54,7 +54,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           product: item._id,
           name: item.name,
           quantity: item.quantity,
-          price: (item.discountPrice || item.price),
+          price: item.discountPrice,
           seller: item?.seller?._id, // Include seller ID
         })),
         shippingAddress: selectedAddress._id, // Store Address ID
@@ -139,7 +139,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
             <span>
               {item.name} (x{item.quantity})
             </span>
-            <span>₹{(item.discountPrice || item.price) * item.quantity}</span>
+            <span>₹{item.discountPrice * item.quantity}</span>
           </div>
         ))}
       </div>

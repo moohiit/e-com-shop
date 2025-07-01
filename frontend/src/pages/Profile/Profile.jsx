@@ -233,9 +233,9 @@ export default function Profile() {
         <div className="bg-green-50 dark:bg-green-900 p-4 rounded mt-10">
           <h3 className="font-semibold text-lg mb-2">Your Activity</h3>
           <ul className="list-disc pl-5 space-y-1">
-            <li><Link to="/orders" className="text-green-700 hover:underline dark:text-green-300">Order History</Link></li>
+            <li><Link to="/my-orders" className="text-green-700 hover:underline dark:text-green-300">Order History</Link></li>
             <li><Link to="/wishlist" className="text-green-700 hover:underline dark:text-green-300">Wishlist</Link></li>
-            <li><Link to="/profile" className="text-green-700 hover:underline dark:text-green-300">Account Settings</Link></li>
+            <li><Link to="/profile/addresses" className="text-green-700 hover:underline dark:text-green-300">Manage Addresses</Link></li>
           </ul>
         </div>
       )}
