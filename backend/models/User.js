@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "seller", "admin"],
+      enum: ["user", "seller", "admin", "superadmin"],
       default: "user",
     },
     isActive: {
@@ -57,6 +57,8 @@ userSchema.methods.getSignedJwtToken = function () {
       name: this.name,
       email: this.email,
       isActive: this.isActive,
+      isEmailVerified: this.isEmailVerified,
+      avatar: this.avatar,
     },
     process.env.JWT_SECRET,
     { expiresIn: "30d" }
