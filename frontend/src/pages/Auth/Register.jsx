@@ -14,9 +14,12 @@ const Register = () => {
   const navigate = useNavigate();
   const onSubmit = async (data) => {
     try {
-      await registerUser(data).unwrap();
-      toast.success('Registered successfully!');
-      navigate('/verify-notice', { state: { email: data.user.email } });
+      const response = await registerUser(data).unwrap();
+      console.log('Registration successful:', response);
+      if (response.success) {
+        toast.success(response.message || 'Registration successful!');
+        navigate('/verify-notice', { state: { email: response.user.email } });
+      }
     } catch (err) {
       toast.error(err.data?.message || 'Registration failed');
     }

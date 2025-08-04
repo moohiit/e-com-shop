@@ -13,8 +13,12 @@ export default function VerifyEmail() {
   useEffect(() => {
     const verify = async () => {
       try {
-        await verifyEmail(token).unwrap();
-        toast.success('Email verified successfully!');
+        const response = await verifyEmail(token).unwrap();
+        console.log('Email verification response:', response);
+        if (!response.success) {
+          throw new Error(response.message || 'Verification failed');
+        }
+        toast.success(response.message || 'Email verified successfully!');
         navigate('/email-verified-success');
       } catch (error) {
         toast.error(error?.data?.message || 'Verification failed');
@@ -22,7 +26,11 @@ export default function VerifyEmail() {
       }
     };
 
-    if (token) verify();
+    if (token) {
+      setTimeout(() => {
+        verify();
+      }, 20000); // Delay for better UX
+    }
   }, [token, verifyEmail, navigate]);
 
   return (

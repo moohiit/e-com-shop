@@ -16,7 +16,7 @@ app.get(/^(?!\/api).*/, (req, res) => {
 const startServer = async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`Server running on port http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 };
 
