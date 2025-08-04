@@ -3,7 +3,7 @@ import { useGetAddressesQuery, useDeleteAddressMutation } from '../../features/a
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
-const AddressList = ({ onAddressSelect }) => {
+const AddressList = ({ onAddressSelect, onEdit }) => {
   const { data: response, isLoading, refetch } = useGetAddressesQuery();
   const [selectedId, setSelectedId] = useState(null);
   const [deleteAddress] = useDeleteAddressMutation();
@@ -31,23 +31,48 @@ const AddressList = ({ onAddressSelect }) => {
       {addresses.map((address) => (
         <motion.div
           key={address._id}
-          className={`p-4 border rounded-lg cursor-pointer ${selectedId === address._id ? 'border-blue-600' : 'border-gray-300'}`}
+          className={`p-4 border rounded-lg cursor-pointer ${
+            selectedId === address._id ? "border-blue-600" : "border-gray-300"
+          } dark:border-gray-700`}
           whileHover={{ scale: 1.02 }}
           onClick={() => handleSelect(address)}
         >
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-2">
             <div>
-              <p><strong>{address.fullName}</strong> - {address.mobileNumber}</p>
-              <p>{address.flat}, {address.locality}, {address.city}</p>
-              <p>{address.state} - {address.pincode}</p>
+              <p>
+                <strong>{address.fullName}</strong> - {address.mobileNumber}
+              </p>
+              <p>
+                {address.flatOrBuilding}, {address.locality}, {address.city}
+              </p>
+              <p>
+                {address.state} - {address.pincode}
+              </p>
               {address.landmark && <p>Landmark: {address.landmark}</p>}
               <p>Type: {address.addressType}</p>
-              {address.isDefault && <span className="text-green-600 font-medium">Default</span>}
+              {address.isDefault && (
+                <span className="text-green-600 font-medium">Default</span>
+              )}
             </div>
-            <div className="space-x-2">
-              {/* You can link this to an Address Edit form */}
-              <button className="text-blue-600" onClick={(e) => { e.stopPropagation(); /* Trigger edit */ }}>Edit</button>
-              <button className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(address._id); }}>Delete</button>
+            <div className="flex gap-2 items-start sm:items-center">
+              <button
+                className="text-blue-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.(address);
+                }}
+              >
+                Edit
+              </button>
+              <button
+                className="text-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(address._id);
+                }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         </motion.div>

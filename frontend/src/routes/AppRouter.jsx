@@ -40,6 +40,7 @@ const EmailVerificationFailed = lazy(() => import("../pages/Email/EmailVerificat
 const ForgotPassword = lazy(() => import("../components/common/ForgotPassword"));
 const OrderDetails = lazy(() => import("../pages/Orders/OrderDetails"));
 const SellerOrderDetails = lazy(() => import("../pages/Seller/SellerOrderDetails"));
+const ManageAddresses = lazy(() => import("../pages/Address/ManageAddresses"));
 
 export function AppRouter() {
   return (
@@ -76,7 +77,7 @@ export function AppRouter() {
             <Route path="my-orders" element={<Orders />} />
             <Route path="order/:id" element={<OrderDetails />} />
             <Route path="order-success" element={<OrderSuccess />} />
-            <Route path="profile/addresses" element={<ManageAddresses />} />
+            <Route path="addresses" element={<ManageAddresses />} />
 
           </Route>
         </Route>
