@@ -1,5 +1,6 @@
+import { updateProfile as updateProfileAction } from "../../features/auth/authSlice";
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Loader2, Pencil } from "lucide-react";
@@ -25,6 +26,7 @@ export default function Profile() {
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
 
+  const dispatch = useDispatch();
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
@@ -65,7 +67,12 @@ export default function Profile() {
       setImagePreview(res.image.imageUrl || "");
       if (res.success) {
         const updateRes = await updateProfile({ avatar: res.image }).unwrap();
-        toast.success(updateRes.message || "Profile image updated!");
+        console.log("Profile image updated:", updateRes);
+        // Dispatch the updateProfile action to update the Redux state
+        if (updateRes.success) {
+          dispatch(updateProfileAction(updateRes.user));
+          toast.success(updateRes.message || "Profile image updated successfully!");
+        }
       }
     } catch (err) {
       toast.error(err?.data?.message || "Image upload failed");
@@ -209,7 +216,7 @@ export default function Profile() {
           <RoleLinks
             title="Admin Panel"
             links={[
-              { to: "/admin", label: "Dashboard" },
+              { to: "/admin/dashboard", label: "Dashboard" },
               { to: "/admin/users", label: "Manage Users" },
               { to: "/admin/categories", label: "Manage Categories" },
             ]}

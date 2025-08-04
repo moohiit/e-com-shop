@@ -38,8 +38,15 @@ export const registerUser = async (req, res) => {
     emailVerificationToken: verificationToken,
     emailVerificationExpires: verificationTokenExpire,
   });
-
-  const verifyURL = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+  const nodeEnv = process.env.NODE_ENV;
+  let verifyURL = null;
+  if (nodeEnv === "development") {
+    // Use localhost for development
+    verifyURL = `http://localhost:5173/verify-email/${verificationToken}`;
+  } else {
+    // Use production URL for production
+    verifyURL = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+  }
 
   const message = `
     <h2>Welcome, ${user.name}</h2>
@@ -72,28 +79,21 @@ export const loginUser = async (req, res) => {
   }
   // find user by email
   const user = await User.findOne({ email });
-  // if user not found or password does not match
-  if (!user || !(await user.matchPassword(password))) {
+  // Check if user exists
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
+  //password does not match
+  if (!(await user.matchPassword(password))) {
     return res
       .status(401)
       .json({ success: false, message: "Invalid credentials" });
   }
   // Check if user is active
   if (!user.isActive) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message:
-          "Your Account is deactivated. Please contact Customer Support ",
-      });
-  }
-  // check if email is verified
-  if (!user.isEmailVerified) {
-    return res.status(403).json({
+    return res.status(404).json({
       success: false,
-      message: "Email not verified",
-      allowResend: true, // you can send this to show "Resend" button
+      message: "Your Account is deactivated. Please contact Customer Support ",
     });
   }
   const token = user.getSignedJwtToken();
@@ -135,12 +135,10 @@ export const verifyEmail = async (req, res) => {
   });
 
   if (!user) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Invalid or expired verification token",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid or expired verification token",
+    });
   }
 
   user.isEmailVerified = true;
@@ -175,9 +173,17 @@ export const resendVerificationEmail = async (req, res) => {
   user.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
 
   await user.save();
-
-  const verifyURL = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
-
+  // Use the environment variable to determine the URL
+  const nodeEnv = process.env.NODE_ENV;
+  let verifyURL = null;
+  if (nodeEnv === "development") {
+    // Use localhost for development
+    verifyURL = `http://localhost:5173/verify-email/${verificationToken}`;
+  } else {
+    // Use production URL for production
+    verifyURL = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+  }
+  
   const message = `
     <h2>Hello, ${user.name}</h2>
     <p>Please verify your email by clicking the link below:</p>
@@ -203,7 +209,6 @@ export const contactFormSubmission = async (req, res) => {
   }
 
   try {
-    console.log("contactEmail", process.env.CONTACT_EMAIL);
     await sendEmail(
       process.env.CONTACT_EMAIL,
       `Contact Form: ${subject}`,
@@ -226,29 +231,33 @@ export const sendOtp = async (req, res) => {
 
   try {
     if (!email) {
-      return res.status(400).json({ success: false, message: "Email is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required." });
     }
-  
+
     const user = await User.findOne({ email });
-  
+
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-  
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000;
-  
+
     await user.save();
-  
+
     const message = `
       <h2>Hello, ${user.name}</h2>
       <p>Your OTP for password reset is: <strong>${otp}</strong></p>
       <p>This OTP will expire in 10 minutes.</p>
     `;
-  
+
     await sendEmail(user.email, "Password Reset OTP", message);
-  
+
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
@@ -259,29 +268,31 @@ export const sendOtp = async (req, res) => {
       success: false,
       message: "Failed to send OTP. Please try again later.",
     });
-    
   }
 };
-
 
 export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 
   try {
     if (!email || !otp) {
-      return res.status(400).json({ success: false, message: "Email and OTP are required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and OTP are required." });
     }
-  
+
     const user = await User.findOne({
       email,
       otp,
       otpExpires: { $gt: Date.now() },
     });
-  
+
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired OTP." });
     }
-  
+
     return res.status(200).json({
       success: true,
       message: "OTP verified successfully",
@@ -292,10 +303,8 @@ export const verifyOtp = async (req, res) => {
       success: false,
       message: "Failed to verify OTP. Please try again later.",
     });
-    
   }
 };
-
 
 export const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
@@ -306,23 +315,23 @@ export const resetPassword = async (req, res) => {
         .status(400)
         .json({ success: false, message: "All fields are required." });
     }
-  
+
     const user = await User.findOne({
       email,
       otp,
       otpExpires: { $gt: Date.now() },
     });
-  
+
     if (!user) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
-  
+
     user.password = newPassword;
     user.otp = undefined;
     user.otpExpires = undefined;
-  
+
     await user.save();
-    console.log("password:",user.password);
+    console.log("password:", user.password);
     return res.status(200).json({
       success: true,
       message: "Password reset successfully",

@@ -53,6 +53,9 @@ const authSlice = createSlice({
       state.token = token;
       state.user = user;
     },
+    updateProfile(state, action) {
+      state.user = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(logoutUser.fulfilled, (state) => {
@@ -62,5 +65,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginSuccess } = authSlice.actions
+export const { loginSuccess, updateProfile } = authSlice.actions
 export default authSlice.reducer

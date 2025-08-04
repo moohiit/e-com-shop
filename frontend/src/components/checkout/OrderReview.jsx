@@ -80,6 +80,11 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   };
 
   const handleRazorpayPayment = async (orderId) => {
+    const res = await loadRazorpayScript();
+    if (!res) {
+      toast.error("Razorpay SDK failed to load.");
+      return;
+    }
     try {
       const { razorpayOrderId, amount, currency } = await createTransaction({
         orderId,

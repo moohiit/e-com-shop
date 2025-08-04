@@ -10,7 +10,7 @@ import AddressList from '../../components/checkout/AddressList';
 import { useGetAddressesQuery } from '../../features/address/addressApiSlice';
 import { saveShippingAddress } from '../../features/cart/cartSlice';
 
-const steps = ['Shipping Address', 'Payment Details', 'Review Order'];
+const steps = ['Shipping Address', 'Payment Method', 'Review Order'];
 
 const Checkout = () => {
   const dispatch = useDispatch();

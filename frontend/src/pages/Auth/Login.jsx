@@ -34,20 +34,17 @@ const Login = () => {
       if (!response || !response.success) {
         throw new Error("Login failed, please try again.");
       }
-
+      if (response.user && !response.user.isEmailVerified) {
+        setShowResend(true);
+        setResendEmail(data.email);
+        throw new Error("Email not verified. Please verify your email.");
+      }
       dispatch(loginSuccess(response));
       toast.success(response.message || "Logged in successfully!");
       navigate("/");
     } catch (err) {
       const backendError = err?.data?.message || err?.message || "Login failed";
-
       toast.error(backendError);
-
-      // Handle unverified email
-      if (err?.data?.allowResend && data.email) {
-        setShowResend(true);
-        setResendEmail(data.email);
-      }
     }
   };
 
