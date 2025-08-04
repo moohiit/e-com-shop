@@ -7,7 +7,8 @@ const app = express();
 app.use(express.json());
 app.use(urlencoded({ extended: true }))
 const corsOptions = {
-  origin: [process.env.CLIENT_URL, 'http:////192.168.0.120:5173'],
+  origin: [process.env.CLIENT_URL, 'http://192.168.0.120:5173', 'http://172.16.1.54:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
 }
 app.use(cors(corsOptions));
