@@ -46,7 +46,7 @@ const AddressList = ({ onAddressSelect, onEdit }) => {
                 {address.flatOrBuilding}, {address.locality}, {address.city}
               </p>
               <p>
-                {address.state} - {address.pincode}
+                {address.state} - {address.pincode}, {address.country}
               </p>
               {address.landmark && <p>Landmark: {address.landmark}</p>}
               <p>Type: {address.addressType}</p>

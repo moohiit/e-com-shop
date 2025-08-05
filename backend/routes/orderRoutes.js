@@ -8,9 +8,8 @@ import {
   getMyOrders,
   getOrderById,
   getAllOrders,
-  updateOrderToPaid,
-  updateOrderToDelivered,
   deleteOrder,
+  cancelOrder,
 } from "../controllers/orderController.js";
 
 // Middleware to protect routes
@@ -23,8 +22,7 @@ router.use(protect);
 router.route("/").post(createOrder).get(isAdmin, getAllOrders);
 router.route("/myorders").get(getMyOrders);
 router.route("/:id").get(getOrderById);
-router.route("/:id/pay").put(updateOrderToPaid);
-router.route("/:id/deliver").put(updateOrderToDelivered);
 router.route("/:id").delete(deleteOrder);
+router.route("/:id/cancel").put(cancelOrder);
 
 export default router;

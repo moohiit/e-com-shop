@@ -4,6 +4,7 @@ const sellerOrderSchema = new mongoose.Schema(
   {
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
     seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
     items: [
       {
@@ -24,6 +25,10 @@ const sellerOrderSchema = new mongoose.Schema(
 
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
+
+    cancellationReason: { type: String }, // Reason for cancellation if applicable
+    isCancelled: { type: Boolean, default: false },
+    cancelledAt: { type: Date },
 
     orderStatus: { type: String, enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Processing' },
 

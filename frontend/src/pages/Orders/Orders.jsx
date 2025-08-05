@@ -1,62 +1,131 @@
 import React from 'react';
 import { useGetMyOrdersQuery } from '../../features/order/orderApi';
+import { 
+  Box,
+  Typography,
+  CircularProgress,
+  Card,
+  CardContent,
+  Chip,
+  Button,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider
+} from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 function Orders() {
-  const { data: orders, isLoading, isError, error } = useGetMyOrdersQuery();
-
+  const { data, isLoading, isError, error } = useGetMyOrdersQuery();
+  const orders = data?.orders || [];
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="animate-spin w-8 h-8 text-blue-600" />
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" height="64vh">
+        <CircularProgress color="primary" />
+      </Box>
     );
   }
 
   if (isError) {
-    return <div className="text-red-600 text-center mt-8">Error: {error?.data?.message || 'Failed to load orders'}</div>;
+    return (
+      <Typography color="error" align="center" mt={4}>
+        Error: {error?.data?.message || 'Failed to load orders'}
+      </Typography>
+    );
   }
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="text-center mt-12">
-        <h2 className="text-2xl font-semibold mb-4">You have no orders yet</h2>
-        <Link to="/" className="bg-blue-600 text-white py-2 px-4 rounded">
+      <Box textAlign="center" mt={4}>
+        <Typography variant="h5" gutterBottom>
+          You have no orders yet
+        </Typography>
+        <Button 
+          component={Link} 
+          to="/" 
+          variant="contained" 
+          color="primary" 
+          sx={{ mt: 2 }}
+        >
           Start Shopping
-        </Link>
-      </div>
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold mb-6">My Orders</h2>
-      <div className="space-y-6">
-        {orders.map((order) => (
-          <div key={order._id} className="p-4 border rounded-lg bg-white dark:bg-gray-800 shadow">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-lg">Order ID: {order._id}</h3>
-              <span className={`text-sm px-3 py-1 rounded-full ${order.isPaid ? 'bg-green-200 text-green-700' : 'bg-yellow-200 text-yellow-700'}`}>
-                {order.isPaid ? 'Paid' : 'Pending'}
-              </span>
-            </div>
-            <p><strong>Date:</strong> {new Date(order.createdAt).toLocaleString()}</p>
-            <p><strong>Total:</strong> ₹{order.totalPrice.toFixed(2)}</p>
-            <p><strong>Status:</strong> {order.orderStatus}</p>
+    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        My Orders
+      </Typography>
 
-            <div className="mt-4 flex space-x-4">
-              <Link
-                to={`/order/${order._id}`}
-                className="bg-blue-600 text-white py-2 px-4 rounded"
-              >
-                View Details
-              </Link>
-            </div>
-          </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {orders.map((order) => (
+          <Card key={order._id} elevation={3}>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" component="h2">
+                  Order #{order._id.substring(0, 8).toUpperCase()}
+                </Typography>
+                <Box display="flex" gap={2}>
+                  <Chip 
+                    label={order.isPaid ? 'Paid' : 'Pending'} 
+                    color={order.isPaid ? 'success' : 'warning'} 
+                    size="small" 
+                  />
+                </Box>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" mb={2}>
+                {format(new Date(order.createdAt), 'MMMM do, yyyy - h:mm a')}
+              </Typography>
+
+              <List dense>
+                {order.orderItems.slice(0, 2).map((item) => (
+                  <ListItem key={item._id} disablePadding>
+                    <ListItemAvatar>
+                      <Avatar 
+                        src={item.product?.images?.[0]?.imageUrl}
+                        variant="rounded"
+                        sx={{ width: 48, height: 48 }}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={item.name}
+                      secondary={`${item.quantity} × ₹${item.price.toFixed(2)}`}
+                    />
+                  </ListItem>
+                ))}
+                {order.orderItems.length > 2 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 8 }}>
+                    +{order.orderItems.length - 2} more items
+                  </Typography>
+                )}
+              </List>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6">
+                  ₹{order.totalPrice.toFixed(2)}
+                </Typography>
+                <Button
+                  component={Link}
+                  to={`/order/${order._id}`}
+                  variant="outlined"
+                  size="small"
+                >
+                  View Details
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

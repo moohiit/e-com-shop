@@ -14,6 +14,7 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
     locality: "",
     city: "",
     state: "",
+    country: "",
     pincode: "",
     landmark: "",
     addressType: "home",
@@ -79,6 +80,10 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
       <div>
         <label>State</label>
         <input name="state" value={form.state} onChange={handleChange} required className="w-full p-2 border rounded" />
+      </div>
+      <div>
+        <label>Country</label>
+        <input name="country" value={form.country} onChange={handleChange} required className="w-full p-2 border rounded" />
       </div>
       <div>
         <label>Pincode</label>

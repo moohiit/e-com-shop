@@ -3,7 +3,7 @@ import Address from "../models/Address.js";
 // Create Address
 export const createAddress = async (req, res) => {
   try {
-    const { fullName, mobileNumber, pincode, city, state, locality, flatOrBuilding, landmark, addressType, isDefault } = req.body;
+    const { fullName, mobileNumber, pincode, city, state, country, locality, flatOrBuilding, landmark, addressType, isDefault } = req.body;
 
     if (isDefault) {
       await Address.updateMany({ user: req.user._id }, { isDefault: false });
@@ -16,6 +16,7 @@ export const createAddress = async (req, res) => {
       pincode,
       city,
       state,
+      country,
       locality,
       flatOrBuilding,
       landmark,

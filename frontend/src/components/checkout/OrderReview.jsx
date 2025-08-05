@@ -65,14 +65,13 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         totalPrice,
       };
 
-      const createdOrder = await createOrder(orderData).unwrap();
-
+      const response = await createOrder(orderData).unwrap();
       if (paymentMethod === "Cash on Delivery") {
         dispatch(clearCart());
         toast.success("Order placed successfully (Cash on Delivery)");
         // Redirect to order success page if you have one
       } else {
-        handleRazorpayPayment(createdOrder._id);
+        handleRazorpayPayment(response.order._id);
       }
     } catch (err) {
       toast.error(err?.data?.message || "Failed to place order");
@@ -106,7 +105,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
               orderId,
               email: response.email, // Optional: If collected on frontend
             }).unwrap();
-
+            
             dispatch(clearCart());
             navigate("/order-success", {
               state: { orderId, totalPrice },
