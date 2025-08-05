@@ -108,6 +108,14 @@ export const createOrder = async (req, res) => {
 // 🚀 Get My Orders
 export const getMyOrders = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10; // Number of orders per page
+    const skip = (page - 1) * limit;
+    const totalOrders = await Order.countDocuments({
+      user: req.user._id,
+    });
+    const totalPages = Math.ceil(totalOrders / limit);
+
     const orders = await Order.find({ user: req.user._id })
       .populate([
         { path: "user", select: "name email" },
@@ -129,10 +137,14 @@ export const getMyOrders = async (req, res) => {
           },
         },
       ])
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.json({
       orders,
+      totalPages,
+      currentPage: page,
       success: true,
       message: "My orders fetched successfully",
     });
@@ -197,6 +209,12 @@ export const getOrderById = async (req, res) => {
 // 🚀 Admin - Get All Orders
 export const getAllOrders = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10; // Number of orders per page
+    const skip = (page - 1) * limit;
+    const totalOrders = await Order.countDocuments();
+    const totalPages = Math.ceil(totalOrders / limit);
+    // Fetch all orders with pagination
     const orders = await Order.find()
       .populate([
         { path: "user", select: "name email" },
@@ -212,9 +230,14 @@ export const getAllOrders = async (req, res) => {
         },
         { path: "sellerOrders" },
       ])
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
     res.json({
       orders,
+      totalPages,
+      currentPage: page,
       success: true,
       message: "All orders fetched successfully",
     });
@@ -226,7 +249,6 @@ export const getAllOrders = async (req, res) => {
     });
   }
 };
-
 
 // 🚀 Admin - Delete Order
 export const deleteOrder = async (req, res) => {
@@ -257,25 +279,28 @@ export const deleteOrder = async (req, res) => {
   }
 };
 
-
-// @desc    Buyer - Cancel order by ID
-// @route   PUT /api/orders/:id/cancel
-// @access  Private (buyer)
+// 🚀 Buyer - Cancel Orders
 export const cancelOrder = async (req, res) => {
   try {
     const { reason } = req.body;
     if (!reason) {
-      return res.status(400).json({ success: false, message: "Cancellation reason is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Cancellation reason is required" });
     }
     const order = await SellerOrder.findById(req.params.id);
 
     if (!order || order.user._id.toString() !== req.user._id.toString()) {
-      return res.status(404).json({ success: false, message: "Order not found or not authorized" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found or not authorized" });
     }
 
     // Check if the order is already delivered or cancelled
     if (order.isDelivered || order.isCancelled) {
-      return res.status(400).json({ success: false, message: "Order cannot be cancelled" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Order cannot be cancelled" });
     }
 
     // Update order status

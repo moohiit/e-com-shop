@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGetMyOrdersQuery } from '../../features/order/orderApi';
-import { 
+import {
   Box,
   Typography,
   CircularProgress,
@@ -13,14 +13,24 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  Divider
+  Divider,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 function Orders() {
-  const { data, isLoading, isError, error } = useGetMyOrdersQuery();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error } = useGetMyOrdersQuery({ page });
+
   const orders = data?.orders || [];
+  const totalPages = data?.totalPages || 1;
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="64vh">
@@ -43,11 +53,11 @@ function Orders() {
         <Typography variant="h5" gutterBottom>
           You have no orders yet
         </Typography>
-        <Button 
-          component={Link} 
-          to="/" 
-          variant="contained" 
-          color="primary" 
+        <Button
+          component={Link}
+          to="/"
+          variant="contained"
+          color="primary"
           sx={{ mt: 2 }}
         >
           Start Shopping
@@ -62,7 +72,7 @@ function Orders() {
         My Orders
       </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 3 }}>
         {orders.map((order) => (
           <Card key={order._id} elevation={3}>
             <CardContent>
@@ -71,10 +81,19 @@ function Orders() {
                   Order #{order._id.substring(0, 8).toUpperCase()}
                 </Typography>
                 <Box display="flex" gap={2}>
-                  <Chip 
-                    label={order.isPaid ? 'Paid' : 'Pending'} 
-                    color={order.isPaid ? 'success' : 'warning'} 
-                    size="small" 
+                  <Chip
+                    label={order.isPaid ? 'Paid' : 'Pending'}
+                    color={order.isPaid ? 'success' : 'warning'}
+                    size="small"
+                  />
+                  <Chip
+                    label={order.orderStatus}
+                    color={
+                      order.orderStatus === 'Delivered' ? 'success' :
+                        order.orderStatus === 'Cancelled' ? 'error' :
+                          order.orderStatus === 'Shipped' ? 'warning' : 'info'
+                    }
+                    size="small"
                   />
                 </Box>
               </Box>
@@ -87,7 +106,7 @@ function Orders() {
                 {order.orderItems.slice(0, 2).map((item) => (
                   <ListItem key={item._id} disablePadding>
                     <ListItemAvatar>
-                      <Avatar 
+                      <Avatar
                         src={item.product?.images?.[0]?.imageUrl}
                         variant="rounded"
                         sx={{ width: 48, height: 48 }}
@@ -125,6 +144,23 @@ function Orders() {
           </Card>
         ))}
       </Box>
+
+      {totalPages > 1 && (
+        <Stack spacing={2} alignItems="center">
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+            sx={{ mt: 3 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            Page {page} of {totalPages}
+          </Typography>
+        </Stack>
+      )}
     </Box>
   );
 }

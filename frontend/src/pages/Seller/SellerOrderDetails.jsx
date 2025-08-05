@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { 
+import {
   useGetSellerOrderByIdQuery,
   useUpdateSellerOrderStatusMutation,
-  useCancelSellerOrderMutation 
+  useCancelSellerOrderMutation
 } from '../../features/order/sellerOrderApi';
-import { 
+import {
   Box,
   Typography,
   Button,
@@ -27,9 +27,9 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle
+  DialogTitle,
+  Alert
 } from '@mui/material';
-import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 function SellerOrderDetails() {
@@ -40,8 +40,41 @@ function SellerOrderDetails() {
   const [status, setStatus] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
-  
+  const [successMessage, setSuccessMessage] = useState('');
+
   const order = data?.order;
+
+  // Status color mapping
+  const statusColors = {
+    Processing: 'info',
+    Shipped: 'warning',
+    Delivered: 'success',
+    Cancelled: 'error'
+  };
+
+  // Memoized derived values
+  const isOrderCancelled = useMemo(() => order?.orderStatus === 'Cancelled', [order]);
+  const canCancel = useMemo(() =>
+    !isOrderCancelled && order?.orderStatus !== 'Delivered',
+    [isOrderCancelled, order]
+  );
+
+  const availableStatusOptions = useMemo(() => {
+    if (isOrderCancelled) return [];
+    return ['Processing', 'Shipped', 'Delivered'].filter(opt =>
+      opt !== order?.orderStatus
+    );
+  }, [isOrderCancelled, order]);
+
+  // Calculate total savings from discounts
+  const totalSavings = useMemo(() => {
+    if (!order?.items) return 0;
+    return order.items.reduce((sum, item) => {
+      const originalPrice = item.product?.price || 0;
+      const discountedPrice = item.price || 0;
+      return sum + (originalPrice - discountedPrice) * item.quantity;
+    }, 0);
+  }, [order]);
 
   useEffect(() => {
     if (order) {
@@ -52,6 +85,8 @@ function SellerOrderDetails() {
   const handleStatusUpdate = async () => {
     try {
       await updateOrderStatus({ id: order._id, status }).unwrap();
+      setSuccessMessage('Order status updated successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
       refetch();
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -73,6 +108,8 @@ function SellerOrderDetails() {
         id: order._id,
         reason: cancelReason
       }).unwrap();
+      setSuccessMessage('Order cancelled successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
       refetch();
       handleCloseCancelDialog();
     } catch (err) {
@@ -106,25 +143,14 @@ function SellerOrderDetails() {
     );
   }
 
-  // Calculate total savings from discounts
-  const totalSavings = order.items.reduce((sum, item) => {
-    const originalPrice = item.product?.price || 0;
-    const discountedPrice = item.price || 0;
-    return sum + (originalPrice - discountedPrice) * item.quantity;
-  }, 0);
-
-  // Status color mapping
-  const statusColors = {
-    Processing: 'info',
-    Shipped: 'warning',
-    Delivered: 'success',
-    Cancelled: 'error'
-  };
-
-  const canCancel = order.orderStatus !== 'Delivered' && order.orderStatus !== 'Cancelled';
-
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {successMessage}
+        </Alert>
+      )}
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" component="h1">
           Order Details
@@ -166,8 +192,8 @@ function SellerOrderDetails() {
               <Typography variant="subtitle2" color="text.secondary">
                 Order Status
               </Typography>
-              <Chip 
-                label={order.orderStatus} 
+              <Chip
+                label={order.orderStatus}
                 color={statusColors[order.orderStatus] || 'default'}
                 size="small"
               />
@@ -175,52 +201,55 @@ function SellerOrderDetails() {
           </Grid>
         </CardContent>
 
-        {/* Status Update Section */}
-        <Paper elevation={0} sx={{ bgcolor: 'background.default', p: 2 }}>
-          <Grid container alignItems="center" spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Update Order Status
-              </Typography>
-              <Box display="flex" gap={2} alignItems="center">
-                <Select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 180 }}
-                >
-                  {['Processing', 'Shipped', 'Delivered', 'Cancelled'].map((s) => (
-                    <MenuItem key={s} value={s}>{s}</MenuItem>
-                  ))}
-                </Select>
-                <Button 
-                  variant="contained" 
-                  onClick={handleStatusUpdate}
-                  disabled={isUpdating || status === order.orderStatus}
-                >
-                  {isUpdating ? 'Updating...' : 'Update'}
-                </Button>
-                {canCancel && (
-                  <Button 
-                    variant="outlined" 
-                    color="error"
-                    onClick={handleOpenCancelDialog}
+        {/* Status Update Section - Only show if order isn't cancelled */}
+        {!isOrderCancelled && (
+          <Paper elevation={0} sx={{ bgcolor: 'background.default', p: 2 }}>
+            <Grid container alignItems="center" spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Update Order Status
+                </Typography>
+                <Box display="flex" gap={2} alignItems="center">
+                  <Select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 180 }}
+                    disabled={isUpdating || availableStatusOptions.length === 0}
                   >
-                    Cancel Order
+                    {availableStatusOptions.map((s) => (
+                      <MenuItem key={s} value={s}>{s}</MenuItem>
+                    ))}
+                  </Select>
+                  <Button
+                    variant="contained"
+                    onClick={handleStatusUpdate}
+                    disabled={isUpdating || status === order.orderStatus || availableStatusOptions.length === 0}
+                  >
+                    {isUpdating ? 'Updating...' : 'Update'}
                   </Button>
-                )}
-              </Box>
+                  {canCancel && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={handleOpenCancelDialog}
+                    >
+                      Cancel Order
+                    </Button>
+                  )}
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6} textAlign={{ md: 'right' }}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography variant="body1">
+                  {format(new Date(order.updatedAt), 'dd MMM yyyy, h:mm a')}
+                </Typography>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={6} textAlign={{ md: 'right' }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Last Updated
-              </Typography>
-              <Typography variant="body1">
-                {format(new Date(order.updatedAt), 'dd MMM yyyy, h:mm a')}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Paper>
+          </Paper>
+        )}
       </Card>
 
       <Grid container spacing={3}>
@@ -289,8 +318,8 @@ function SellerOrderDetails() {
                   <React.Fragment key={item._id}>
                     <ListItem alignItems="flex-start" sx={{ py: 2 }}>
                       <ListItemAvatar>
-                        <Avatar 
-                          variant="rounded" 
+                        <Avatar
+                          variant="rounded"
                           src={item.product?.images?.[0]?.imageUrl}
                           sx={{ width: 80, height: 80, mr: 2 }}
                         >
@@ -373,6 +402,9 @@ function SellerOrderDetails() {
       <Dialog open={openCancelDialog} onClose={handleCloseCancelDialog}>
         <DialogTitle>Cancel Order</DialogTitle>
         <DialogContent>
+          <Typography gutterBottom>
+            Are you sure you want to cancel this order?
+          </Typography>
           <TextField
             autoFocus
             margin="dense"
@@ -383,16 +415,17 @@ function SellerOrderDetails() {
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             required
+            sx={{ mt: 2 }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseCancelDialog}>Cancel</Button>
-          <Button 
-            onClick={handleCancelOrder} 
+          <Button
+            onClick={handleCancelOrder}
             color="error"
             disabled={!cancelReason || isCancelling}
           >
-            {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
+            {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
           </Button>
         </DialogActions>
       </Dialog>
