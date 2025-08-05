@@ -2,11 +2,10 @@ import { apiSlice } from "../../services/apiSlice";
 
 export const sellerOrderApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-
     // ✅ QUERY: Fetch all seller orders
     getSellerOrders: builder.query({
-      query: () => "/seller-orders",
-      providesTags: ["SellerOrder"], // provides the list tag
+      query: ({page}) => `/seller-orders?page=${page}`,
+      providesTags: ["SellerOrder"],
     }),
 
     // ✅ QUERY: Fetch single seller order by ID
@@ -40,7 +39,6 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
         "SellerOrder", // also invalidate the list
       ],
     }),
-
   }),
 });
 

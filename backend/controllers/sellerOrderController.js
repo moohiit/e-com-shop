@@ -6,32 +6,52 @@ import SellerOrder from "../models/SellerOrder.js";
 // @access  Private (seller)
 export const getSellerOrders = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10; // Number of orders per page
+    const skip = (page - 1) * limit;
+
+    const totalOrders = await SellerOrder.countDocuments({
+      seller: req.user._id,
+    });
+    const totalPages = Math.ceil(totalOrders / limit);
+
     const orders = await SellerOrder.find({ seller: req.user._id })
       .populate("seller", "name email")
       .populate({
         path: "order",
         populate: [
-          { path: "user", select: "name email" }, // This will populate user inside order
+          { path: "user", select: "name email" },
           {
             path: "shippingAddress",
-            select: "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
-          }, // Optional: if you want address details
+            select:
+              "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+          },
         ],
-        select: "shippingAddress paymentMethod totalPrice user", // Fields from Order you need
+        select: "shippingAddress paymentMethod totalPrice user isPaid",
       })
-      .populate("items.product", "name description brand price discountPrice images category isActive")
-      .sort({ createdAt: -1 });
+      .populate(
+        "items.product",
+        "name description brand price discountPrice images category isActive"
+      )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
       message: "Seller orders fetched successfully",
       orders,
+      totalPages,
+      currentPage: page,
     });
   } catch (error) {
     console.error("Error in getSellerOrders:", error);
     res
       .status(500)
-      .json({ success: false, message: error.message || "Failed to fetch seller orders" });
+      .json({
+        success: false,
+        message: error.message || "Failed to fetch seller orders",
+      });
   }
 };
 

@@ -1,23 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGetSellerOrdersQuery } from '../../features/order/sellerOrderApi';
-import { 
+import {
   Box,
   Typography,
   CircularProgress,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Chip,
   Button,
   Avatar,
   List,
   ListItem,
   ListItemAvatar,
-  ListItemText
+  ListItemText,
+  Grid,
+  Pagination,
+  Stack,
+  Divider,
+  Card,
+  CardContent,
+  CardActions,
+  Badge
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -31,9 +33,15 @@ const statusColors = {
 };
 
 function SellerOrders() {
-  const { data, isLoading, isError, error } = useGetSellerOrdersQuery();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error } = useGetSellerOrdersQuery({ page });
+
   const orders = data?.orders || [];
-  console.log('Seller Orders:', orders);
+  const totalPages = data?.totalPages || 1;
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
 
   if (isLoading) {
     return (
@@ -65,111 +73,170 @@ function SellerOrders() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: '100%', overflow: 'hidden' }}>
+    <Box sx={{ p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Seller Orders
       </Typography>
 
-      <Paper elevation={3} sx={{ mb: 3, overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'background.default' }}>
-                <TableCell sx={{ fontWeight: 'bold' }}>Order ID</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Buyer</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Items</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Total</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Payment Method</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Payment Status</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow 
-                  key={order._id} 
-                  hover 
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+      <Grid container spacing={3}>
+        {orders.map((order) => (
+          <Grid item xs={12} key={order._id}>
+            <Card elevation={3}>
+              <CardContent>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
                 >
-                  <TableCell sx={{ maxWidth: 150 }}>
-                    <Typography variant="body2" noWrap>
-                      {order._id}
+                  <Typography variant="h6" component="div">
+                    Order #{order._id.substring(0, 8).toUpperCase()}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {format(new Date(order.createdAt), 'MMM dd, yyyy - hh:mm a')}
+                  </Typography>
+                </Stack>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Buyer Information
                     </Typography>
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2">
-                      {format(new Date(order.createdAt), 'MMM dd')}
+                      <strong>Name:</strong> {order.order?.user?.name || 'Unknown'}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography>
-                      {order.order?.user?.name || 'Unknown'}
+                    {order.order?.shippingAddress && (
+                      <>
+                        <Typography variant="body2">
+                          <strong>Address:</strong> {order.order.shippingAddress.flatOrBuilding}, {order.order.shippingAddress.locality}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>City:</strong> {order.order.shippingAddress.city}, {order.order.shippingAddress.state} - {order.order.shippingAddress.pincode}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Contact:</strong> {order.order.shippingAddress.mobileNumber}
+                        </Typography>
+                      </>
+                    )}
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Order Summary
                     </Typography>
-                  </TableCell>
-                  <TableCell sx={{ maxWidth: 200 }}>
-                    <List dense disablePadding>
-                      {order.items.map((item) => (
-                        <ListItem key={item._id} disablePadding sx={{ py: 0.5 }}>
-                          <ListItemAvatar sx={{ minWidth: 40 }}>
-                            <Avatar 
-                              src={item.product?.images?.[0]?.imageUrl} 
-                              variant="rounded"
-                              sx={{ width: 32, height: 32 }}
-                            />
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={`${item.product?.name} x ${item.quantity}`}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </TableCell>
-                  <TableCell>
-                    <Typography fontWeight="medium">
-                      ₹{order.order?.totalPrice?.toFixed(2)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {order.order?.paymentMethod}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      <Chip 
-                      label={order.order?.isPaid ? 'Paid' : 'Pending'}
-                      size="small"
-                      color={order.order?.isPaid ? 'success' : 'error'}
-                    />
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={order.orderStatus} 
-                      size="small"
-                      color={statusColors[order.orderStatus] || 'default'}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      component={Link}
-                      to={`/seller/order/${order._id}`}
-                      variant="outlined"
-                      size="small"
-                      color="primary"
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2">
+                        <strong>Status:</strong>
+                      </Typography>
+                      <Chip
+                        label={order.orderStatus}
+                        size="small"
+                        color={statusColors[order.orderStatus] || 'default'}
+                      />
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="body2">
+                        <strong>Payment:</strong>
+                      </Typography>
+                      <Chip
+                        label={order.order?.isPaid ? 'Paid' : 'Pending'}
+                        size="small"
+                        color={order.order?.isPaid ? 'success' : 'error'}
+                      />
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2">
+                        <strong>Method:</strong>
+                      </Typography>
+                      <Typography variant="body2">
+                        {order.order?.paymentMethod}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2">
+                        <strong>Total:</strong>
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        ₹{order.order?.totalPrice?.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                </Grid>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="subtitle1" gutterBottom>
+                  Products ({order.items.length})
+                </Typography>
+                <List dense>
+                  {order.items.map((item) => (
+                    <ListItem
+                      key={item._id}
+                      sx={{
+                        py: 1,
+                        borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                        '&:last-child': { borderBottom: 'none' }
+                      }}
                     >
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+                      <ListItemAvatar>
+                        <Avatar
+                          src={item.product?.images?.[0]?.imageUrl}
+                          variant="rounded"
+                          sx={{ width: 56, height: 56, mr: 2 }}
+                        />
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={item.product?.name}
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" display="block">
+                              ₹{(item.product?.discountPrice || item.product?.price)?.toFixed(2)} × {item.quantity}
+                            </Typography>
+                            {item.product?.brand && (
+                              <Typography component="span" variant="caption" display="block">
+                                Brand: {item.product.brand}
+                              </Typography>
+                            )}
+                          </>
+                        }
+                      />
+                      <Typography variant="body2" fontWeight="bold">
+                        ₹{((item.product?.discountPrice || item.product?.price) * item.quantity).toFixed(2)}
+                      </Typography>
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
+                <Button
+                  component={Link}
+                  to={`/seller/order/${order._id}`}
+                  variant="contained"
+                  size="small"
+                  color="primary"
+                >
+                  View Details
+                </Button>
+              </CardActions>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
+      )}
     </Box>
   );
 }
