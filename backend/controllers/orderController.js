@@ -1,24 +1,39 @@
-import Order from '../models/Order.js';
-import SellerOrder from '../models/SellerOrder.js';
-import Product from '../models/Product.js';
+import Order from "../models/Order.js";
+import SellerOrder from "../models/SellerOrder.js";
+import Product from "../models/Product.js";
 
 // 🚀 Create Order with Seller Orders
 export const createOrder = async (req, res) => {
   try {
-    const { orderItems, shippingAddress, paymentMethod, itemsPrice, shippingPrice, taxPrice, totalPrice } = req.body;
+    const {
+      orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      totalPrice,
+    } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
-      return res.status(400).json({ message: 'No order items' });
+      return res
+        .status(400)
+        .json({ success: false, message: "No order items" });
     }
 
     // Validate products and adjust stock
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
       if (!product) {
-        return res.status(404).json({ message: `Product not found: ${item.name}` });
+        return res
+          .status(404)
+          .json({ success: false, message: `Product not found: ${item.name}` });
       }
       if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for: ${item.name}` });
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for: ${item.name}`,
+        });
       }
 
       product.stock -= item.quantity;
@@ -41,7 +56,7 @@ export const createOrder = async (req, res) => {
 
     // Create Seller Orders
     const sellerGroups = {};
-    orderItems.forEach(item => {
+    orderItems.forEach((item) => {
       if (!sellerGroups[item.seller]) {
         sellerGroups[item.seller] = [];
       }
@@ -52,11 +67,15 @@ export const createOrder = async (req, res) => {
 
     for (const sellerId in sellerGroups) {
       const sellerItems = sellerGroups[sellerId];
-      const sellerTotal = sellerItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const sellerTotal = sellerItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
 
       const sellerOrder = new SellerOrder({
         order: createdOrder._id,
         seller: sellerId,
+        user: req.user._id,
         items: sellerItems,
         itemsPrice: sellerTotal,
         shippingPrice: 0, // Optional: Add shipping split logic per seller
@@ -72,10 +91,17 @@ export const createOrder = async (req, res) => {
     createdOrder.sellerOrders = sellerOrders;
     await createdOrder.save();
 
-    res.status(201).json(createdOrder);
+    res.status(201).json({
+      order: createdOrder,
+      message: "Order created successfully",
+      success: true,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to create order' });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create order",
+    });
   }
 };
 
@@ -84,43 +110,87 @@ export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .populate([
-        { path: 'user', select: 'name email' },
-        { path: 'shippingAddress', select: 'fullName address city postalCode country' },
-        { path: 'orderItems.product', select: 'name price' },
-        { path: 'sellerOrders' }
+        { path: "user", select: "name email" },
+        {
+          path: "shippingAddress",
+          select:
+            "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+        },
+        {
+          path: "orderItems.product",
+          select:
+            "name description brand price discountPrice images category isActive",
+        },
+        {
+          path: "sellerOrders",
+          populate: {
+            path: "seller",
+            select: "name email", // add any other fields you want
+          },
+        },
       ])
       .sort({ createdAt: -1 });
 
-    res.json(orders);
+    res.json({
+      orders,
+      success: true,
+      message: "My orders fetched successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch orders' });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch orders",
+    });
   }
 };
 
 // 🚀 Get Order by ID (Admin/User)
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate([
-        { path: 'user', select: 'name email' },
-        { path: 'shippingAddress', select: 'fullName address city postalCode country' },
-        { path: 'orderItems.product', select: 'name price' },
-        { path: 'sellerOrders' }
-      ]);
+    const order = await Order.findById(req.params.id).populate([
+      { path: "user", select: "name email" },
+      {
+        path: "shippingAddress",
+        select:
+          "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+      },
+      {
+        path: "orderItems.product",
+        select:
+          "name description brand price discountPrice images category isActive",
+      },
+      {
+        path: "sellerOrders",
+        populate: {
+          path: "seller",
+          select: "name email", // add any other fields you want
+        },
+      },
+    ]);
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
-    if (req.user.role !== 'admin' && order.user._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to view this order' });
+    if (
+      req.user.role !== "admin" &&
+      order.user._id.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized to view this order" });
     }
 
-    res.json(order);
+    res.json({ order, success: true, message: "Order fetched successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch order' });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch order",
+    });
   }
 };
 
@@ -129,74 +199,34 @@ export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate([
-        { path: 'user', select: 'name email' },
-        { path: 'shippingAddress', select: 'fullName address city postalCode country' },
-        { path: 'orderItems.product', select: 'name price' },
-        { path: 'sellerOrders' }
+        { path: "user", select: "name email" },
+        {
+          path: "shippingAddress",
+          select:
+            "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+        },
+        {
+          path: "orderItems.product",
+          select:
+            "name description brand price discountPrice images category isActive",
+        },
+        { path: "sellerOrders" },
       ])
       .sort({ createdAt: -1 });
-
-    res.json(orders);
+    res.json({
+      orders,
+      success: true,
+      message: "All orders fetched successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch orders' });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch orders",
+    });
   }
 };
 
-// 🚀 Update Order to Paid
-export const updateOrderToPaid = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    order.isPaid = true;
-    order.paidAt = new Date();
-
-    await order.save();
-
-    // Optionally, mark all SellerOrders as paid
-    await SellerOrder.updateMany(
-      { _id: { $in: order.sellerOrders } },
-      { $set: { isPaid: true, paidAt: new Date() } }
-    );
-
-    res.json({ message: 'Order marked as paid', order });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to update order' });
-  }
-};
-
-// 🚀 Admin - Update Order to Delivered
-export const updateOrderToDelivered = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    order.isDelivered = true;
-    order.deliveredAt = new Date();
-    order.orderStatus = 'Delivered';
-
-    await order.save();
-
-    // Optionally, mark all SellerOrders as delivered
-    await SellerOrder.updateMany(
-      { _id: { $in: order.sellerOrders } },
-      { $set: { isDelivered: true, deliveredAt: new Date(), orderStatus: 'Delivered' } }
-    );
-
-    res.json({ message: 'Order marked as delivered', order });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to update order' });
-  }
-};
 
 // 🚀 Admin - Delete Order
 export const deleteOrder = async (req, res) => {
@@ -204,7 +234,9 @@ export const deleteOrder = async (req, res) => {
     const order = await Order.findById(req.params.id);
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
     // Delete all linked SellerOrders
@@ -212,9 +244,51 @@ export const deleteOrder = async (req, res) => {
 
     await order.remove();
 
-    res.json({ message: 'Order and associated seller orders deleted successfully' });
+    res.json({
+      success: true,
+      message: "Order and associated seller orders deleted successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to delete order' });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete order",
+    });
+  }
+};
+
+
+// @desc    Buyer - Cancel order by ID
+// @route   PUT /api/orders/:id/cancel
+// @access  Private (buyer)
+export const cancelOrder = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) {
+      return res.status(400).json({ success: false, message: "Cancellation reason is required" });
+    }
+    const order = await SellerOrder.findById(req.params.id);
+
+    if (!order || order.user._id.toString() !== req.user._id.toString()) {
+      return res.status(404).json({ success: false, message: "Order not found or not authorized" });
+    }
+
+    // Check if the order is already delivered or cancelled
+    if (order.isDelivered || order.isCancelled) {
+      return res.status(400).json({ success: false, message: "Order cannot be cancelled" });
+    }
+
+    // Update order status
+    order.cancellationReason = reason;
+    order.isCancelled = true;
+    order.cancelledAt = new Date();
+    order.orderStatus = "Cancelled"; // Update order status to Cancelled
+    order.isPaid = false; // Mark as not paid if cancelled
+    await order.save();
+
+    res.json({ success: true, message: "Order cancelled successfully", order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Failed to cancel order" });
   }
 };

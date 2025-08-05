@@ -2,12 +2,13 @@ import crypto from 'crypto';
 import { razorpayInstance } from '../config/razorpay.js';
 import Order from '../models/Order.js';
 import Transaction from '../models/Transaction.js';
+import SellerOrder from '../models/SellerOrder.js';
 
 // Create Razorpay Order (Initiate Payment)
 export const createRazorpayOrder = async (req, res) => {
   try {
     const { orderId } = req.body;
-
+    console.log('Creating Razorpay order for:', orderId);
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     if (order.isPaid) return res.status(400).json({ message: 'Order is already paid' });
@@ -75,6 +76,12 @@ export const verifyRazorpayPayment = async (req, res) => {
     order.paidAt = new Date();
     order.transaction = transaction._id;
     await order.save();
+
+    // update SellerOrders if needed
+    await SellerOrder.updateMany(
+      { _id: { $in: order.sellerOrders } },
+      { $set: { isPaid: true, paidAt: new Date() } }
+    );
 
     res.json({
       success: true,

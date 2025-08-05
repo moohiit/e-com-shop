@@ -13,6 +13,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.0",
     "@mui/material": "^7.1.0",
     "@mui/styled-engine": "^7.1.1",
     "@reduxjs/toolkit": "^2.8.2",
@@ -20,6 +21,7 @@
     "@tailwindcss/vite": "^4.1.7",
     "axios": "^1.9.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.15.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.511.0",

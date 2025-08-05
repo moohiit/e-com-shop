@@ -120,7 +120,7 @@ function Home() {
               </div>
               <div className="space-x-4">
                 <Link
-                  to="/profile/orders"
+                  to="/my-orders"
                   className="inline-flex items-center bg-white text-green-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-medium shadow transition-all"
                 >
                   Your Orders

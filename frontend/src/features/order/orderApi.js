@@ -35,20 +35,22 @@ export const orderApi = apiSlice.injectEndpoints({
       }),
     }),
 
-    // Mark Order As Delivered
-    updateOrderToDelivered: builder.mutation({
-      query: (id) => ({
-        url: `/orders/${id}/deliver`,
-        method: "PUT",
-      }),
-    }),
-
     // Delete Order
     deleteOrder: builder.mutation({
       query: (id) => ({
         url: `/orders/${id}`,
         method: "DELETE",
       }),
+    }),
+
+    // Cancel Order
+    cancelOrder: builder.mutation({
+      query: ({ id, reason }) => ({
+        url: `/orders/${id}/cancel`,
+        method: "PUT",
+        body: { reason },
+      }),
+      invalidatesTags: ["Order"],
     }),
   }),
 });
@@ -59,6 +61,6 @@ export const {
   useGetMyOrdersQuery,
   useGetOrderByIdQuery,
   useUpdateOrderToPaidMutation,
-  useUpdateOrderToDeliveredMutation,
   useDeleteOrderMutation,
+  useCancelOrderMutation,
 } = orderApi;

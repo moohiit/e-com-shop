@@ -13,6 +13,7 @@ const addressSchema = new mongoose.Schema({
   pincode: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
+  country: { type: String, required: true },
   locality: { type: String, required: true },
   flatOrBuilding: { type: String, required: true },
   landmark: { type: String },

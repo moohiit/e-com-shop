@@ -26,10 +26,7 @@ const orderSchema = new mongoose.Schema(
 
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
-
     sellerOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SellerOrder' }], // New Field
-
-    orderStatus: { type: String, enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Processing' },
   },
   { timestamps: true }
 );
