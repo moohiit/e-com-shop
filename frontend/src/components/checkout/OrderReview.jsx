@@ -1,4 +1,3 @@
-// OrderReview.jsx
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../features/cart/cartSlice";
 import { useCreateOrderMutation } from "../../features/order/orderApi";
@@ -8,6 +7,8 @@ import {
 } from "../../features/transaction/transactionApi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FaArrowLeft, FaBox, FaShippingFast, FaMoneyBillWave, FaCreditCard } from "react-icons/fa";
 
 const OrderReview = ({ onBack, selectedAddress }) => {
   const user = useSelector((state) => state.auth.user);
@@ -31,6 +32,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
 
     return { itemsPrice, shippingPrice, taxPrice, totalPrice };
   };
+
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
@@ -40,6 +42,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       document.body.appendChild(script);
     });
   };
+
   const { itemsPrice, shippingPrice, taxPrice, totalPrice } = calculatePrices();
 
   const handleOrderPlacement = async () => {
@@ -55,9 +58,10 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           name: item.name,
           quantity: item.quantity,
           price: item.discountPrice,
-          seller: item?.seller?._id, // Include seller ID
+          seller: item?.seller?._id,
+          image: item.images[0]?.imageUrl,
         })),
-        shippingAddress: selectedAddress._id, // Store Address ID
+        shippingAddress: selectedAddress._id,
         paymentMethod,
         itemsPrice,
         shippingPrice,
@@ -69,7 +73,9 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       if (paymentMethod === "Cash on Delivery") {
         dispatch(clearCart());
         toast.success("Order placed successfully (Cash on Delivery)");
-        // Redirect to order success page if you have one
+        navigate("/order-success", {
+          state: { orderId: response.order._id, totalPrice },
+        });
       } else {
         handleRazorpayPayment(response.order._id);
       }
@@ -103,7 +109,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
               orderId,
-              email: response.email, // Optional: If collected on frontend
+              email: user.email,
             }).unwrap();
             
             dispatch(clearCart());
@@ -111,14 +117,13 @@ const OrderReview = ({ onBack, selectedAddress }) => {
               state: { orderId, totalPrice },
             });
             toast.success("Payment Successful! Order Placed.");
-            // Redirect to order success page if needed
           } catch (error) {
             toast.error("Payment verification failed");
           }
         },
         prefill: {
           name: selectedAddress.fullName,
-          email: user.email, // Optional: Pass user email here
+          email: user.email,
           contact: selectedAddress.mobileNumber,
         },
         theme: {
@@ -135,41 +140,123 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Review Your Order</h3>
-      <div>
-        {cartItems.map((item) => (
-          <div key={item._id} className="flex justify-between py-2 border-b">
-            <span>
-              {item.name} (x{item.quantity})
-            </span>
-            <span>₹{item.discountPrice * item.quantity}</span>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"
+    >
+      <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Review Your Order</h3>
+      
+      {/* Shipping Address */}
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <FaShippingFast className="mr-2" /> Shipping Address
+        </h4>
+        <div className="text-gray-600 dark:text-gray-400">
+          <p>{selectedAddress.fullName}</p>
+          <p>{selectedAddress.flatOrBuilding}, {selectedAddress.locality}</p>
+          <p>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</p>
+          <p>{selectedAddress.country}</p>
+          <p className="mt-2">Phone: {selectedAddress.mobileNumber}</p>
+          {selectedAddress.landmark && <p>Landmark: {selectedAddress.landmark}</p>}
+        </div>
+      </div>
+
+      {/* Payment Method */}
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          {paymentMethod === "Cash on Delivery" ? (
+            <FaMoneyBillWave className="mr-2" />
+          ) : (
+            <FaCreditCard className="mr-2" />
+          )}
+          Payment Method
+        </h4>
+        <p className="text-gray-600 dark:text-gray-400">
+          {paymentMethod === "Cash on Delivery" 
+            ? "Cash on Delivery (Pay when you receive your order)"
+            : "Online Payment (Credit/Debit Card, UPI, Net Banking)"}
+        </p>
+      </div>
+
+      {/* Order Items */}
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <FaBox className="mr-2" /> Order Items ({cartItems.length})
+        </h4>
+        <div className="space-y-4">
+          {cartItems.map((item) => (
+            <div key={item._id} className="flex items-start border-b border-gray-200 dark:border-gray-600 pb-4">
+              <img 
+                src={item.images[0]?.imageUrl} 
+                alt={item.name} 
+                className="w-16 h-16 object-cover rounded mr-4"
+              />
+              <div className="flex-1">
+                <h5 className="font-medium text-gray-800 dark:text-gray-200">{item.name}</h5>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {item.quantity} × ₹{item.discountPrice.toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Seller: {item.seller?.name || "ShopEase"}
+                </p>
+              </div>
+              <div className="text-gray-800 dark:text-gray-200 font-medium">
+                ₹{(item.discountPrice * item.quantity).toFixed(2)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Order Summary */}
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Order Summary</h4>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+            <span className="text-gray-800 dark:text-gray-200">₹{itemsPrice.toFixed(2)}</span>
           </div>
-        ))}
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Shipping</span>
+            <span className="text-gray-800 dark:text-gray-200">
+              {shippingPrice === 0 ? "FREE" : `₹${shippingPrice.toFixed(2)}`}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Tax (18%)</span>
+            <span className="text-gray-800 dark:text-gray-200">₹{taxPrice.toFixed(2)}</span>
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+            <div className="flex justify-between font-bold text-lg">
+              <span className="text-gray-800 dark:text-gray-200">Total</span>
+              <span className="text-blue-600 dark:text-blue-400">₹{totalPrice.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2 text-right">
-        <p>Items Price: ₹{itemsPrice}</p>
-        <p>Shipping Price: {shippingPrice === 0 ? "Free" : `₹${shippingPrice}`}</p>
-        <p>Tax Price: ₹{taxPrice}</p>
-        <p className="font-semibold">Total Price: ₹{totalPrice}</p>
-      </div>
-
-      <div className="flex justify-between">
-        <button
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4">
+        <motion.button
           onClick={onBack}
-          className="bg-gray-600 text-white py-2 px-4 rounded"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          Back
-        </button>
-        <button
+          <FaArrowLeft /> Back
+        </motion.button>
+        <motion.button
           onClick={handleOrderPlacement}
-          className="bg-green-600 text-white py-2 px-4 rounded"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
         >
-          Place Order
-        </button>
+          {paymentMethod === "Cash on Delivery" ? "Place Order" : "Proceed to Payment"}
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
