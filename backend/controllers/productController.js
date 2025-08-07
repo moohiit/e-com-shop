@@ -345,30 +345,35 @@ export const getAllProductsBySeller = async (req, res) => {
   }
 };
 
+// get produnct by id
 export const getProductById = async (req, res) => {
   try {
-    const id = req.params.id;
+    const product = await Product.findById(req.params.id)
+      .populate({
+        path: 'seller',
+        select: 'name email role avatar'
+      })
+      .populate({
+        path: 'category',
+        select: 'name'
+      });
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid product ID." });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
     }
 
-    const product = await Product.findById(id).populate([{ path: "category", select: "name" },
-      {path: "seller", select: "name email"}
-    ]);
-    if (!product || !product.isActive) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found." });
-    }
-
-    res.json({ success: true, data: product });
+    res.json({
+      success: true,
+      product
+    });
   } catch (error) {
+    console.error('Error in getProductById:', error);
     res.status(500).json({
       success: false,
-      message: error.message || "Internal server error.",
+      message: error.message || 'Internal server error.'
     });
   }
 };
