@@ -32,6 +32,7 @@ function AddProduct() {
       description: "",
       brand: "",
       price: "",
+      taxPercentage: "",
       discountPrice: "",
       stock: "",
       category: "",
@@ -151,6 +152,19 @@ function AddProduct() {
             {errors.price && (
               <p className="text-red-500 text-sm mt-1">
                 {errors.price.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <input
+              type="number"
+              {...register("taxPercentage", { required: "Tax Percentage is required" })}
+              placeholder="Tax Percentage"
+              className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+            />
+            {errors.taxPercentage && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.taxPercentage.message}
               </p>
             )}
           </div>

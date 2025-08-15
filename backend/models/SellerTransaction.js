@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 
-const transactionSchema = new mongoose.Schema(
+const sellerTransactionSchema = new mongoose.Schema(
   {
-    user: {
+    seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    order: {
+    sellerOrder: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: "SellerOrder",
       required: true,
     },
     paymentId: { type: String, required: true }, // From payment gateway
@@ -17,13 +17,15 @@ const transactionSchema = new mongoose.Schema(
     status: { type: String, required: true }, // success, pending, failed
     amount: { type: Number, required: true },
     currency: { type: String, default: "INR" },
-    email: { type: String }, // Payer’s email
     paymentTime: { type: Date, default: Date.now },
     rawResponse: { type: Object }, // Save full gateway response (optional but useful)
   },
   { timestamps: true }
 );
 
-const Transaction = mongoose.model("Transaction", transactionSchema);
+const SellerTransaction = mongoose.model(
+  "SellerTransaction",
+  sellerTransactionSchema
+);
 
-export default Transaction;
+export default SellerTransaction;

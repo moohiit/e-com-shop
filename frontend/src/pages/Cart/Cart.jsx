@@ -55,6 +55,24 @@ function Cart() {
     navigate('/checkout');
   };
 
+  // Calculate price breakdown for the cart summary
+  const calculatePrices = () => {
+    const itemsPrice = cartItems.reduce(
+      (acc, item) => acc + item.actualPrice * item.quantity,
+      0
+    );
+    const taxPrice = cartItems.reduce(
+      (acc, item) => acc + item.taxes * item.quantity,
+      0
+    );
+    const shippingPrice = itemsPrice > 500 ? 0 : 50;
+    const totalPrice = Number((itemsPrice + taxPrice + shippingPrice).toFixed(2));
+
+    return { itemsPrice, taxPrice, shippingPrice, totalPrice };
+  };
+
+  const { itemsPrice, taxPrice, shippingPrice, totalPrice } = calculatePrices();
+
   if (cartItems.length === 0) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-lg">
@@ -83,15 +101,17 @@ function Cart() {
             >
               <div className="flex items-center gap-4">
                 <img
-                  src={item.images[0].imageUrl}
+                  src={item.images[0]?.imageUrl}
                   alt={item.name}
                   className="w-24 h-24 object-cover rounded-lg"
                 />
                 <div>
                   <h3 className="font-semibold text-lg">{item.name}</h3>
-                  <p className="text-gray-500">
-                    Price: ₹{item.discountPrice || item.price}
-                  </p>
+                  <div className="text-gray-500 space-y-1">
+                    <p>Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}</p>
+                    <p>Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}</p>
+                    <p>Total Price: ₹{(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => handleDecrease(item)}
@@ -118,7 +138,7 @@ function Cart() {
                   Remove
                 </button>
                 <span className="font-semibold">
-                  ₹{(item.discountPrice || item.price) * item.quantity}
+                  ₹{(item.price * item.quantity).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -134,8 +154,20 @@ function Cart() {
             <span>{totalQuantity}</span>
           </div>
           <div className="flex justify-between">
+            <span>Items Price:</span>
+            <span>₹{itemsPrice.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax Price:</span>
+            <span>₹{taxPrice.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Shipping Price:</span>
+            <span>{shippingPrice === 0 ? 'Free' : `₹${shippingPrice.toFixed(2)}`}</span>
+          </div>
+          <div className="flex justify-between font-bold">
             <span>Total Amount:</span>
-            <span className="font-bold">₹{totalAmount.toFixed(2)}</span>
+            <span>₹{totalPrice.toFixed(2)}</span>
           </div>
 
           <button

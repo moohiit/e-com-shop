@@ -1,5 +1,5 @@
-// SellerOrder Controller
 import SellerOrder from "../models/SellerOrder.js";
+import Order from "../models/Order.js";
 
 // @desc    Seller - Get all their orders
 // @route   GET /api/seller-orders
@@ -46,12 +46,10 @@ export const getSellerOrders = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getSellerOrders:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to fetch seller orders",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch seller orders",
+    });
   }
 };
 
@@ -65,89 +63,195 @@ export const getSellerOrderById = async (req, res) => {
       .populate({
         path: "order",
         populate: [
-          { path: "user", select: "name email" }, // This will populate user inside order
+          { path: "user", select: "name email" },
           {
             path: "shippingAddress",
-            select: "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
-          }, // Optional: if you want address details
+            select:
+              "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+          },
         ],
-        select: "shippingAddress paymentMethod totalPrice user", // Fields from Order you need
+        select: "shippingAddress paymentMethod totalPrice user",
       })
-      .populate("items.product", "name description brand price discountPrice images category isActive");
+      .populate(
+        "items.product",
+        "name description brand price discountPrice images category isActive"
+      );
 
     if (!order || order.seller._id.toString() !== req.user._id.toString()) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found or not authorized" });
     }
-    res.json({ order, success: true, message: "Seller order fetched successfully" });
+    res.json({
+      order,
+      success: true,
+      message: "Seller order fetched successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: error.message || "Failed to fetch seller order" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message || "Failed to fetch seller order",
+      });
   }
 };
 
-// @desc    Seller - Update order status
-// @route   PUT /api/seller-orders/:id/status
+// @desc    Seller - Update order item status
+// @route   PUT /api/seller-orders/:id/item-status
 // @access  Private (seller)
-export const updateSellerOrderStatus = async (req, res) => {
+export const updateSellerOrderItemStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const order = await SellerOrder.findById(req.params.id);
+    const { productId, status } = req.body;
+    if (!productId || !status) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Product ID and status are required",
+        });
+    }
 
-    if (!order || order.seller.toString() !== req.user._id.toString()) {
+    const sellerOrder = await SellerOrder.findById(req.params.id);
+    if (
+      !sellerOrder ||
+      sellerOrder.seller.toString() !== req.user._id.toString()
+    ) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found or not authorized" });
     }
 
-    order.orderStatus = status;
+    const orderItem = sellerOrder.items.find(
+      (item) => item.product.toString() === productId
+    );
+    if (!orderItem) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found in order" });
+    }
+
+    if (orderItem.isCancelled) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Cannot update status of cancelled item",
+        });
+    }
+
+    orderItem.orderStatus = status;
     if (status === "Delivered") {
-      order.isDelivered = true;
-      order.deliveredAt = new Date();
+      orderItem.isDelivered = true;
+      orderItem.deliveredAt = new Date();
     }
 
-    await order.save();
+    // Update corresponding main Order item
+    const mainOrder = await Order.findById(sellerOrder.order);
+    if (mainOrder) {
+      const mainOrderItem = mainOrder.orderItems.find(
+        (item) => item.product.toString() === productId
+      );
+      if (mainOrderItem) {
+        mainOrderItem.orderStatus = status;
+        if (status === "Delivered") {
+          mainOrderItem.isDelivered = true;
+          mainOrderItem.deliveredAt = new Date();
+        }
+        await mainOrder.save();
+      }
+    }
 
-    res.status(200).json({ success: true, message: "Order status updated", order });
+    await sellerOrder.save();
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Order item status updated",
+        order: sellerOrder,
+      });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: "Failed to update order status" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to update order item status" });
   }
 };
 
-// @desc    Seller - Cancel order
-// @route   PUT /api/seller-orders/:id/cancel
-export const cancelSellerOrder = async (req, res) => {
+// @desc    Seller - Cancel order item
+// @route   PUT /api/seller-orders/:id/cancel-item
+// @access  Private (seller)
+export const cancelSellerOrderItem = async (req, res) => {
   try {
-    if (!req.body.reason) {
-      return res.status(400).json({ success: false, message: "Cancellation reason is required" });
+    const { productId, reason } = req.body;
+    if (!productId || !reason) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Product ID and cancellation reason are required",
+        });
     }
-    const order = await SellerOrder.findById(req.params.id);
 
-    if (!order || order.seller._id.toString() !== req.user._id.toString()) {
+    const sellerOrder = await SellerOrder.findById(req.params.id);
+    if (
+      !sellerOrder ||
+      sellerOrder.seller._id.toString() !== req.user._id.toString()
+    ) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found or not authorized" });
     }
 
-    // Check if the order is already delivered or cancelled
-    if (order.isDelivered || order.isCancelled) {
-      return res.status(400).json({ success: false, message: "Order cannot be cancelled" });
+    const orderItem = sellerOrder.items.find(
+      (item) => item.product.toString() === productId
+    );
+    if (!orderItem) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found in order" });
     }
 
-    // Update order status
-    order.cancellationReason = req.body.reason;
-    order.isCancelled = true;
-    order.cancelledAt = new Date();
-    await order.save();
+    if (orderItem.isDelivered || orderItem.isCancelled) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order item cannot be cancelled" });
+    }
 
-    res.json({ success: true, message: "Order cancelled successfully", order });
+    // Update seller order item
+    orderItem.cancellationReason = reason;
+    orderItem.isCancelled = true;
+    orderItem.cancelledAt = new Date();
+    orderItem.orderStatus = "Cancelled";
+
+    // Update corresponding main Order item
+    const mainOrder = await Order.findById(sellerOrder.order);
+    if (mainOrder) {
+      const mainOrderItem = mainOrder.orderItems.find(
+        (item) => item.product.toString() === productId
+      );
+      if (mainOrderItem) {
+        mainOrderItem.cancellationReason = reason;
+        mainOrderItem.isCancelled = true;
+        mainOrderItem.cancelledAt = new Date();
+        mainOrderItem.orderStatus = "Cancelled";
+        await mainOrder.save();
+      }
+    }
+    
+    await sellerOrder.save();
+
+    res.json({
+      success: true,
+      message: "Order item cancelled successfully",
+      order: sellerOrder,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: "Failed to cancel order" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to cancel order item" });
   }
 };
-
-
-

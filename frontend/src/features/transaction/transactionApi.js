@@ -8,7 +8,7 @@ export const transactionApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Order"],
+      invalidatesTags: ["Order", "SellerOrder"],
     }),
     verifyTransaction: builder.mutation({
       query: (data) => ({
@@ -16,7 +16,12 @@ export const transactionApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Order"],
+      invalidatesTags: [
+        "Order",
+        "SellerOrder",
+        "Transaction",
+        "SellerTransaction",
+      ],
     }),
     getTransactionById: builder.query({
       query: (id) => `/transactions/${id}`,
@@ -47,10 +52,17 @@ export const transactionApiSlice = apiSlice.injectEndpoints({
     }),
     getUserTransactions: builder.query({
       query: (userId) => `/transactions/user/${userId}`,
-      providesTags: (result, error, userId) => [{ type: "Transaction", id: userId }],
+      providesTags: (result, error, userId) => [
+        { type: "Transaction", id: userId },
+      ],
+    }),
+    getSellerTransactions: builder.query({
+      query: () => "/transactions/seller-transactions",
+      providesTags: ["SellerTransaction"],
     }),
   }),
 });
+
 export const {
   useCreateTransactionMutation,
   useVerifyTransactionMutation,
@@ -60,4 +72,5 @@ export const {
   useUpdateTransactionStatusMutation,
   useDeleteTransactionMutation,
   useGetUserTransactionsQuery,
+  useGetSellerTransactionsQuery,
 } = transactionApiSlice;

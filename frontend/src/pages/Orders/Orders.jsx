@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useGetMyOrdersQuery } from '../../features/order/orderApi';
 import {
   Box,
@@ -29,6 +29,31 @@ function Orders() {
 
   const handlePageChange = (event, value) => {
     setPage(value);
+  };
+
+  const getOverallStatus = (items) => {
+    if (!items || items.length === 0) return 'Processing';
+
+    const statuses = items.map(item => item.orderStatus);
+    const uniqueStatuses = [...new Set(statuses)];
+
+    if (uniqueStatuses.length === 1) return uniqueStatuses[0];
+
+    if (statuses.includes('Cancelled')) return 'Partially Cancelled';
+    if (statuses.includes('Delivered')) return 'Partially Delivered';
+    if (statuses.includes('Shipped')) return 'Partially Shipped';
+
+    return 'Processing';
+  };
+
+  const statusColors = {
+    Processing: 'info',
+    Shipped: 'warning',
+    Delivered: 'success',
+    Cancelled: 'error',
+    'Partially Delivered': 'success',
+    'Partially Shipped': 'warning',
+    'Partially Cancelled': 'error',
   };
 
   if (isLoading) {
@@ -73,76 +98,88 @@ function Orders() {
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 3 }}>
-        {orders.map((order) => (
-          <Card key={order._id} elevation={3}>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" component="h2">
-                  Order #{order._id.substring(0, 8).toUpperCase()}
-                </Typography>
-                <Box display="flex" gap={2}>
-                  <Chip
-                    label={order.isPaid ? 'Paid' : 'Pending'}
-                    color={order.isPaid ? 'success' : 'warning'}
-                    size="small"
-                  />
-                  <Chip
-                    label={order.orderStatus}
-                    color={
-                      order.orderStatus === 'Delivered' ? 'success' :
-                        order.orderStatus === 'Cancelled' ? 'error' :
-                          order.orderStatus === 'Shipped' ? 'warning' : 'info'
-                    }
-                    size="small"
-                  />
-                </Box>
-              </Box>
+        {orders.map((order) => {
+          const overallStatus = getOverallStatus(order.orderItems);
 
-              <Typography variant="body2" color="text.secondary" mb={2}>
-                {format(new Date(order.createdAt), 'MMMM do, yyyy - h:mm a')}
-              </Typography>
-
-              <List dense>
-                {order.orderItems.slice(0, 2).map((item) => (
-                  <ListItem key={item._id} disablePadding>
-                    <ListItemAvatar>
-                      <Avatar
-                        src={item.product?.images?.[0]?.imageUrl}
-                        variant="rounded"
-                        sx={{ width: 48, height: 48 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={item.name}
-                      secondary={`${item.quantity} × ₹${item.price.toFixed(2)}`}
-                    />
-                  </ListItem>
-                ))}
-                {order.orderItems.length > 2 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ ml: 8 }}>
-                    +{order.orderItems.length - 2} more items
+          return (
+            <Card key={order._id} elevation={3}>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6" component="h2">
+                    Order #{order._id.substring(0, 8).toUpperCase()}
                   </Typography>
-                )}
-              </List>
+                  <Box display="flex" gap={2}>
+                    <Chip
+                      label={order.isPaid ? 'Paid' : 'Pending'}
+                      color={order.isPaid ? 'success' : 'warning'}
+                      size="small"
+                    />
+                    <Chip
+                      label={overallStatus}
+                      color={statusColors[overallStatus] || 'default'}
+                      size="small"
+                    />
+                  </Box>
+                </Box>
 
-              <Divider sx={{ my: 2 }} />
-
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">
-                  ₹{order.totalPrice.toFixed(2)}
+                <Typography variant="body2" color="text.secondary" mb={2}>
+                  {format(new Date(order.createdAt), 'MMMM do, yyyy - h:mm a')}
                 </Typography>
-                <Button
-                  component={Link}
-                  to={`/order/${order._id}`}
-                  variant="outlined"
-                  size="small"
-                >
-                  View Details
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        ))}
+
+                <List dense>
+                  {order.orderItems.slice(0, 2).map((item) => (
+                    <ListItem key={item._id} disablePadding>
+                      <ListItemAvatar>
+                        <Avatar
+                          src={item.product?.images?.[0]?.imageUrl}
+                          variant="rounded"
+                          sx={{ width: 48, height: 48 }}
+                        />
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={item.name}
+                        secondary={
+                          <Box component="span">
+                            <Typography component="span" variant="body2" color="text.secondary">
+                              {`${item.quantity} × ₹${item.price.toFixed(2)}`}
+                            </Typography>
+                            <Chip
+                              label={item.orderStatus}
+                              color={statusColors[item.orderStatus] || 'default'}
+                              size="small"
+                              sx={{ ml: 1 }}
+                            />
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                  {order.orderItems.length > 2 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 8 }}>
+                      +{order.orderItems.length - 2} more items
+                    </Typography>
+                  )}
+                </List>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6">
+                    ₹{order.totalPrice.toFixed(2)}
+                  </Typography>
+                  <Button
+                    component={Link}
+                    to={`/order/${order._id}`}
+                    variant="outlined"
+                    size="small"
+                  >
+                    View Details
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          );
+        })}
       </Box>
 
       {totalPages > 1 && (

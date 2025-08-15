@@ -22,6 +22,9 @@ export const createOrder = async (req, res) => {
     }
 
     // Validate products and adjust stock
+    let calculatedItemsPrice = 0;
+    let calculatedTaxPrice = 0;
+    let calculatedTotalItemPrice = 0; // Sum of item.price * quantity (includes taxes)
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
       if (!product) {
@@ -35,19 +38,65 @@ export const createOrder = async (req, res) => {
           message: `Insufficient stock for: ${item.name}`,
         });
       }
-
+      // Validate that the provided price matches the product's price (including taxes)
+      if (item.price !== product.price) {
+        return res.status(400).json({
+          success: false,
+          message: `Price mismatch for: ${item.name}. Expected ₹${product.price}, got ₹${item.price}`,
+        });
+      }
+      // Validate that provided actualPrice and taxes match product
+      if (item.actualPrice !== product.actualPrice || item.taxes !== product.taxes) {
+        return res.status(400).json({
+          success: false,
+          message: `Price details mismatch for: ${item.name}. Expected actualPrice=₹${product.actualPrice}, taxes=₹${product.taxes}`,
+        });
+      }
+      calculatedItemsPrice += product.actualPrice * item.quantity;
+      calculatedTaxPrice += product.taxes * item.quantity;
+      calculatedTotalItemPrice += product.price * item.quantity;
       product.stock -= item.quantity;
       await product.save();
+    }
+
+    // Validate provided prices
+    const expectedItemsPrice = Number(calculatedItemsPrice.toFixed(2));
+    const expectedTaxPrice = Number(calculatedTaxPrice.toFixed(2));
+    const expectedTotalPrice = Number(
+      (calculatedTotalItemPrice + shippingPrice).toFixed(2)
+    );
+
+    if (
+      expectedItemsPrice !== Number(itemsPrice.toFixed(2)) ||
+      expectedTaxPrice !== Number(taxPrice.toFixed(2)) ||
+      expectedTotalPrice !== Number(totalPrice.toFixed(2))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Price validation failed. Expected: itemsPrice=₹${expectedItemsPrice}, taxPrice=₹${expectedTaxPrice}, totalPrice=₹${expectedTotalPrice}`,
+      });
     }
 
     // Create Main Order
     const order = new Order({
       user: req.user._id,
-      orderItems,
+      orderItems: orderItems.map((item) => ({
+        product: item.product,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        actualPrice: item.actualPrice,
+        taxes: item.taxes,
+        taxPercentage: item.taxPercentage,
+        seller: item.seller,
+        orderStatus: "Processing",
+        isCancelled: false,
+        isDelivered: false,
+      })),
       shippingAddress,
+      shippingPrice,
       paymentMethod,
       itemsPrice,
-      shippingPrice,
       taxPrice,
       totalPrice,
     });
@@ -67,20 +116,37 @@ export const createOrder = async (req, res) => {
 
     for (const sellerId in sellerGroups) {
       const sellerItems = sellerGroups[sellerId];
-      const sellerTotal = sellerItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
+      const sellerItemsPrice = sellerItems.reduce(
+        (sum, item) => sum + item.actualPrice * item.quantity,
         0
+      );
+      const sellerTaxPrice = sellerItems.reduce(
+        (sum, item) => sum + item.taxes * item.quantity,
+        0
+      );
+      const sellerTotalPrice = Number(
+        sellerItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)
       );
 
       const sellerOrder = new SellerOrder({
         order: createdOrder._id,
         seller: sellerId,
         user: req.user._id,
-        items: sellerItems,
-        itemsPrice: sellerTotal,
-        shippingPrice: 0, // Optional: Add shipping split logic per seller
-        taxPrice: 0,
-        totalPrice: sellerTotal, // Adjust if adding shipping/tax
+        items: sellerItems.map((item) => ({
+          product: item.product,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          actualPrice: item.actualPrice,
+          taxes: item.taxes,
+          taxPercentage: item.taxPercentage,
+          orderStatus: "Processing",
+          isCancelled: false,
+          isDelivered: false,
+        })),
+        itemsPrice: sellerItemsPrice,
+        taxPrice: sellerTaxPrice,
+        totalPrice: sellerTotalPrice,
       });
 
       const savedSellerOrder = await sellerOrder.save();
@@ -133,7 +199,7 @@ export const getMyOrders = async (req, res) => {
           path: "sellerOrders",
           populate: {
             path: "seller",
-            select: "name email", // add any other fields you want
+            select: "name email",
           },
         },
       ])
@@ -176,7 +242,7 @@ export const getOrderById = async (req, res) => {
         path: "sellerOrders",
         populate: {
           path: "seller",
-          select: "name email", // add any other fields you want
+          select: "name email",
         },
       },
     ]);
@@ -214,7 +280,7 @@ export const getAllOrders = async (req, res) => {
     const skip = (page - 1) * limit;
     const totalOrders = await Order.countDocuments();
     const totalPages = Math.ceil(totalOrders / limit);
-    // Fetch all orders with pagination
+
     const orders = await Order.find()
       .populate([
         { path: "user", select: "name email" },
@@ -233,7 +299,7 @@ export const getAllOrders = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    
+
     res.json({
       orders,
       totalPages,
@@ -279,41 +345,79 @@ export const deleteOrder = async (req, res) => {
   }
 };
 
-// 🚀 Buyer - Cancel Orders
-export const cancelOrder = async (req, res) => {
+// 🚀 Buyer - Cancel Specific Order Item
+export const cancelOrderItem = async (req, res) => {
   try {
-    const { reason } = req.body;
-    if (!reason) {
+    const { reason, productId } = req.body;
+    if (!reason || !productId) {
       return res
         .status(400)
-        .json({ success: false, message: "Cancellation reason is required" });
+        .json({
+          success: false,
+          message: "Cancellation reason and product ID are required",
+        });
     }
-    const order = await SellerOrder.findById(req.params.id);
 
+    const order = await Order.findById(req.params.id);
     if (!order || order.user._id.toString() !== req.user._id.toString()) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found or not authorized" });
     }
 
-    // Check if the order is already delivered or cancelled
-    if (order.isDelivered || order.isCancelled) {
+    // Find the order item to cancel
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
+    if (!orderItem) {
       return res
-        .status(400)
-        .json({ success: false, message: "Order cannot be cancelled" });
+        .status(404)
+        .json({ success: false, message: "Product not found in order" });
     }
 
-    // Update order status
-    order.cancellationReason = reason;
-    order.isCancelled = true;
-    order.cancelledAt = new Date();
-    order.orderStatus = "Cancelled"; // Update order status to Cancelled
-    order.isPaid = false; // Mark as not paid if cancelled
+    // Check if the item is already delivered or cancelled
+    if (orderItem.isDelivered || orderItem.isCancelled) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order item cannot be cancelled" });
+    }
+
+    // Update order item status
+    orderItem.cancellationReason = reason;
+    orderItem.isCancelled = true;
+    orderItem.cancelledAt = new Date();
+    orderItem.orderStatus = "Cancelled";
+
+    // Update corresponding SellerOrder item
+    const sellerOrder = await SellerOrder.findOne({
+      order: order._id,
+      seller: orderItem.seller,
+    });
+    if (sellerOrder) {
+      const sellerOrderItem = sellerOrder.items.find(
+        (item) => item.product.toString() === productId
+      );
+      if (sellerOrderItem) {
+        sellerOrderItem.cancellationReason = reason;
+        sellerOrderItem.isCancelled = true;
+        sellerOrderItem.cancelledAt = new Date();
+        sellerOrderItem.orderStatus = "Cancelled";
+
+        await sellerOrder.save();
+      }
+    }
+
     await order.save();
 
-    res.json({ success: true, message: "Order cancelled successfully", order });
+    res.json({
+      success: true,
+      message: "Order item cancelled successfully",
+      order,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: "Failed to cancel order" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to cancel order item" });
   }
 };

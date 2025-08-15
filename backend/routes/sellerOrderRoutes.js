@@ -1,19 +1,19 @@
-import express from 'express';
-import { protect, isSeller } from '../middleware/authMiddleware.js';
+import express from "express";
+import { protect, isSeller } from "../middleware/authMiddleware.js";
 import {
   getSellerOrders,
   getSellerOrderById,
-  updateSellerOrderStatus,
-  cancelSellerOrder,
-} from '../controllers/sellerOrderController.js';
+  updateSellerOrderItemStatus,
+  cancelSellerOrderItem,
+} from "../controllers/sellerOrderController.js";
 
 const router = express.Router();
 
 router.use(protect, isSeller);
 
-router.route('/').get(getSellerOrders);
-router.route('/:id').get(getSellerOrderById);
-router.route('/:id/status').put(updateSellerOrderStatus);
-router.route('/:id/cancel').put(cancelSellerOrder);
+router.route("/").get(getSellerOrders);
+router.route("/:id").get(getSellerOrderById);
+router.route("/:id/item-status").put(updateSellerOrderItemStatus);
+router.route("/:id/cancel-item").put(cancelSellerOrderItem);
 
 export default router;

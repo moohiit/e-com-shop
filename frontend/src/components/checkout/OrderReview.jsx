@@ -1,4 +1,3 @@
-// OrderReview.jsx
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../features/cart/cartSlice";
 import { useCreateOrderMutation } from "../../features/order/orderApi";
@@ -20,17 +19,28 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   const [createTransaction] = useCreateTransactionMutation();
   const [verifyTransaction] = useVerifyTransactionMutation();
 
+  // Calculate order prices (items, shipping, tax, total)
   const calculatePrices = () => {
     const itemsPrice = cartItems.reduce(
-      (acc, item) => acc + item.discountPrice * item.quantity,
+      (acc, item) => acc + item.actualPrice * item.quantity,
+      0
+    );
+    const taxPrice = cartItems.reduce(
+      (acc, item) => acc + item.taxes * item.quantity,
       0
     );
     const shippingPrice = itemsPrice > 500 ? 0 : 50;
-    const taxPrice = +(0.18 * itemsPrice).toFixed(2);
-    const totalPrice = itemsPrice + shippingPrice + taxPrice;
+    const totalPrice = Number(
+      (
+        cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0) +
+        shippingPrice
+      ).toFixed(2)
+    );
 
-    return { itemsPrice, shippingPrice, taxPrice, totalPrice };
+    return { itemsPrice, taxPrice, shippingPrice, totalPrice };
   };
+
+  // Load Razorpay SDK script dynamically
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
@@ -40,24 +50,30 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       document.body.appendChild(script);
     });
   };
+
   const { itemsPrice, shippingPrice, taxPrice, totalPrice } = calculatePrices();
 
+  // Handle order placement (create order and initiate payment if needed)
   const handleOrderPlacement = async () => {
     const res = await loadRazorpayScript();
     if (!res) {
       toast.error("Razorpay SDK failed to load.");
       return;
     }
+
     try {
       const orderData = {
         orderItems: cartItems.map((item) => ({
           product: item._id,
           name: item.name,
           quantity: item.quantity,
-          price: item.discountPrice,
-          seller: item?.seller?._id, // Include seller ID
+          price: item.price, // Total price including taxes
+          actualPrice: item.actualPrice,
+          taxes: item.taxes,
+          taxPercentage: item.taxPercentage,
+          seller: item?.seller?._id,
         })),
-        shippingAddress: selectedAddress._id, // Store Address ID
+        shippingAddress: selectedAddress._id,
         paymentMethod,
         itemsPrice,
         shippingPrice,
@@ -69,21 +85,26 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       if (paymentMethod === "Cash on Delivery") {
         dispatch(clearCart());
         toast.success("Order placed successfully (Cash on Delivery)");
-        // Redirect to order success page if you have one
+        navigate("/order-success", {
+          state: { orderId: response.order._id, totalPrice },
+        });
       } else {
         handleRazorpayPayment(response.order._id);
       }
     } catch (err) {
       toast.error(err?.data?.message || "Failed to place order");
+      console.error("Order placement error:", err);
     }
   };
 
+  // Handle Razorpay payment initiation and verification
   const handleRazorpayPayment = async (orderId) => {
     const res = await loadRazorpayScript();
     if (!res) {
       toast.error("Razorpay SDK failed to load.");
       return;
     }
+
     try {
       const { razorpayOrderId, amount, currency } = await createTransaction({
         orderId,
@@ -98,27 +119,27 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         order_id: razorpayOrderId,
         handler: async (response) => {
           try {
-            await verifyTransaction({
+            const verificationResponse = await verifyTransaction({
               razorpayOrderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
               orderId,
-              email: response.email, // Optional: If collected on frontend
+              email: user.email,
             }).unwrap();
-            
+
             dispatch(clearCart());
             navigate("/order-success", {
               state: { orderId, totalPrice },
             });
-            toast.success("Payment Successful! Order Placed.");
-            // Redirect to order success page if needed
+            toast.success("Payment successful! Order placed.");
           } catch (error) {
-            toast.error("Payment verification failed");
+            toast.error(error?.data?.message || "Payment verification failed");
+            console.error("Payment verification error:", error);
           }
         },
         prefill: {
           name: selectedAddress.fullName,
-          email: user.email, // Optional: Pass user email here
+          email: user.email,
           contact: selectedAddress.mobileNumber,
         },
         theme: {
@@ -127,10 +148,14 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       };
 
       const razorpay = new window.Razorpay(options);
+      razorpay.on('payment.failed', (response) => {
+        toast.error("Payment failed. Please try again.");
+        console.error("Razorpay payment failure:", response.error);
+      });
       razorpay.open();
     } catch (err) {
+      toast.error(err?.data?.message || "Failed to initiate payment");
       console.error("Razorpay payment initiation failed:", err);
-      toast.error("Failed to initiate payment");
     }
   };
 
@@ -139,20 +164,24 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       <h3 className="text-lg font-semibold">Review Your Order</h3>
       <div>
         {cartItems.map((item) => (
-          <div key={item._id} className="flex justify-between py-2 border-b">
-            <span>
-              {item.name} (x{item.quantity})
-            </span>
-            <span>₹{item.discountPrice * item.quantity}</span>
+          <div key={item._id} className="flex flex-col py-2 border-b">
+            <div className="flex justify-between">
+              <span>{item.name} (x{item.quantity})</span>
+              <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}</p>
+              <p>Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}</p>
+            </div>
           </div>
         ))}
       </div>
 
       <div className="space-y-2 text-right">
-        <p>Items Price: ₹{itemsPrice}</p>
-        <p>Shipping Price: {shippingPrice === 0 ? "Free" : `₹${shippingPrice}`}</p>
-        <p>Tax Price: ₹{taxPrice}</p>
-        <p className="font-semibold">Total Price: ₹{totalPrice}</p>
+        <p>Items Price: ₹{itemsPrice.toFixed(2)}</p>
+        <p>Shipping Price: {shippingPrice === 0 ? "Free" : `₹${shippingPrice.toFixed(2)}`}</p>
+        <p>Tax Price: ₹{taxPrice.toFixed(2)}</p>
+        <p className="font-semibold">Total Price: ₹{totalPrice.toFixed(2)}</p>
       </div>
 
       <div className="flex justify-between">

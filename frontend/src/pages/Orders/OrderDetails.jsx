@@ -1,8 +1,8 @@
-import React, { use, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { 
-  useGetOrderByIdQuery, 
-  useCancelOrderMutation 
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  useGetOrderByIdQuery,
+  useCancelOrderItemMutation
 } from '../../features/order/orderApi';
 import {
   Box,
@@ -19,7 +19,6 @@ import {
   ListItemText,
   Divider,
   Grid,
-  Paper,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -27,45 +26,74 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle
+  DialogTitle,
+  useTheme
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+
 function OrderDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data, isLoading, isError, error } = useGetOrderByIdQuery(id);
-  const [cancelSellerOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
+  const [cancelOrderItem, { isLoading: isCancelling }] = useCancelOrderItemMutation();
   const [cancelReason, setCancelReason] = useState('');
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
-  const [selectedSellerOrder, setSelectedSellerOrder] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const order = data?.order;
-  const navigate = useNavigate();
+  const theme = useTheme();
 
-  const handleOpenCancelDialog = (sellerOrder) => {
-    setSelectedSellerOrder(sellerOrder);
+  const handleOpenCancelDialog = (item) => {
+    setSelectedItem(item);
     setOpenCancelDialog(true);
   };
 
   const handleCloseCancelDialog = () => {
     setOpenCancelDialog(false);
     setCancelReason('');
-    setSelectedSellerOrder(null);
+    setSelectedItem(null);
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrderItem = async () => {
     try {
-      await cancelSellerOrder({
-        id: selectedSellerOrder._id,
+      await cancelOrderItem({
+        id: order._id,
+        productId: selectedItem.product._id,
         reason: cancelReason
       }).unwrap();
       handleCloseCancelDialog();
-      setCancelReason('');
-      navigate('/my-orders');
+      toast.success('Item cancelled successfully');
     } catch (err) {
-      console.error('Failed to cancel seller order:', err);
+      toast.error(err?.data?.message || 'Failed to cancel item');
+      console.error('Failed to cancel item:', err);
     }
+  };
+
+  const getOverallStatus = (items) => {
+    if (!items || items.length === 0) return 'Processing';
+
+    const statuses = items.map(item => item.orderStatus);
+    const uniqueStatuses = [...new Set(statuses)];
+
+    if (uniqueStatuses.length === 1) return uniqueStatuses[0];
+
+    if (statuses.includes('Cancelled')) return 'Partially Cancelled';
+    if (statuses.includes('Delivered')) return 'Partially Delivered';
+    if (statuses.includes('Shipped')) return 'Partially Shipped';
+
+    return 'Processing';
+  };
+
+  const statusColors = {
+    Processing: 'info',
+    Shipped: 'warning',
+    Delivered: 'success',
+    Cancelled: 'error',
+    'Partially Delivered': 'success',
+    'Partially Shipped': 'warning',
+    'Partially Cancelled': 'error',
   };
 
   if (isLoading) {
@@ -90,10 +118,10 @@ function OrderDetails() {
         <Typography variant="h5" gutterBottom>
           Order not found
         </Typography>
-        <Button 
-          component={Link} 
-          to="/my-orders" 
-          variant="contained" 
+        <Button
+          component={Link}
+          to="/my-orders"
+          variant="contained"
           sx={{ mt: 2 }}
         >
           Back to Orders
@@ -102,16 +130,20 @@ function OrderDetails() {
     );
   }
 
-  // Status color mapping
-  const statusColors = {
-    Processing: 'info',
-    Shipped: 'warning',
-    Delivered: 'success',
-    Cancelled: 'error'
-  };
+  const totalSavings = order.orderItems.reduce((sum, item) => {
+    const originalPrice = item.product?.actualPrice || item.actualPrice || 0;
+    const finalPrice = item.price || 0;
+    return sum + (originalPrice - finalPrice) * item.quantity;
+  }, 0);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+    <Box sx={{
+      p: 3,
+      maxWidth: 1200,
+      margin: '0 auto',
+      backgroundColor: theme.palette.background.default,
+      color: theme.palette.text.primary
+    }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Order Details
@@ -139,10 +171,10 @@ function OrderDetails() {
               </Box>
               <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography>Payment Status:</Typography>
-                <Chip 
-                  label={order.isPaid ? 'Paid' : 'Pending'} 
-                  color={order.isPaid ? 'success' : 'warning'} 
-                  size="small" 
+                <Chip
+                  label={order.isPaid ? 'Paid' : 'Pending'}
+                  color={order.isPaid ? 'success' : 'warning'}
+                  size="small"
                 />
               </Box>
               {order.isPaid && (
@@ -190,39 +222,66 @@ function OrderDetails() {
                   <React.Fragment key={item._id}>
                     <ListItem alignItems="flex-start" sx={{ py: 2 }}>
                       <ListItemAvatar>
-                        <Avatar 
+                        <Avatar
                           src={item.product?.images?.[0]?.imageUrl}
                           variant="rounded"
                           sx={{ width: 80, height: 80, mr: 2 }}
                         />
                       </ListItemAvatar>
-                      <ListItemText
-                        primary={item.name}
-                        secondary={
-                          <>
-                            <Box component="span" display="block" color="text.secondary">
-                              {item.product?.brand}
-                            </Box>
-                            <Box display="flex" alignItems="center" mt={0.5}>
-                              <Box component="span">
-                                ₹{item.price.toFixed(2)}
-                              </Box>
-                              {item.product?.price > item.price && (
-                                <Box component="span" color="text.secondary" sx={{ ml: 1, textDecoration: 'line-through' }}>
-                                  ₹{item.product.price.toFixed(2)}
-                                </Box>
-                              )}
-                            </Box>
-                          </>
-                        }
-                      />
-                      <Box textAlign="right">
+                      <Box component="div" sx={{ flexGrow: 1 }}>
+                        <Typography variant="body1" component="div">
+                          {item.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" component="div">
+                          {item.product?.brand}
+                        </Typography>
+                        <Box component="div" mt={0.5}>
+                          <Typography variant="body2" component="div">
+                            Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}
+                          </Typography>
+                          <Typography variant="body2" component="div">
+                            Total Price: ₹{(item.price * item.quantity).toFixed(2)}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" mt={1}>
+                          <Chip
+                            label={item.orderStatus}
+                            color={statusColors[item.orderStatus] || 'default'}
+                            size="small"
+                          />
+                          {item.isDelivered && item.deliveredAt && (
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                              on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                            </Typography>
+                          )}
+                          {item.isCancelled && item.cancelledAt && (
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                              on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      <Box sx={{ minWidth: 150, textAlign: 'right' }}>
                         <Typography variant="body2" color="text.secondary">
                           Qty: {item.quantity}
                         </Typography>
                         <Typography variant="body1" fontWeight="medium">
                           ₹{(item.price * item.quantity).toFixed(2)}
                         </Typography>
+                        {!item.isCancelled && !item.isDelivered && (
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            sx={{ mt: 1 }}
+                            onClick={() => handleOpenCancelDialog(item)}
+                          >
+                            Cancel Item
+                          </Button>
+                        )}
                       </Box>
                     </ListItem>
                     <Divider component="li" />
@@ -237,11 +296,10 @@ function OrderDetails() {
               <Typography variant="h6" gutterBottom>
                 Seller Order Statuses
               </Typography>
-              
+
               {order.sellerOrders?.map((sellerOrder) => {
-                const canCancelSellerOrder = sellerOrder.orderStatus !== 'Delivered' && 
-                                              sellerOrder.orderStatus !== 'Cancelled';
-                
+                const overallStatus = getOverallStatus(sellerOrder.items);
+
                 return (
                   <Accordion key={sellerOrder._id} sx={{ mb: 2 }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -249,10 +307,10 @@ function OrderDetails() {
                         <Typography sx={{ flex: 1 }}>
                           Seller: {sellerOrder.seller?.name || 'Unknown Seller'}
                         </Typography>
-                        <Chip 
-                          label={sellerOrder.orderStatus} 
-                          color={statusColors[sellerOrder.orderStatus] || 'default'} 
-                          size="small" 
+                        <Chip
+                          label={overallStatus}
+                          color={statusColors[overallStatus] || 'default'}
+                          size="small"
                         />
                       </Box>
                     </AccordionSummary>
@@ -262,46 +320,50 @@ function OrderDetails() {
                         <List dense>
                           {sellerOrder.items.map((item) => (
                             <ListItem key={item._id}>
-                              <ListItemText
-                                primary={`${item.name} (Qty: ${item.quantity})`}
-                                secondary={`₹${item.price.toFixed(2)} each`}
-                              />
-                              <Typography>₹{(item.price * item.quantity).toFixed(2)}</Typography>
+                              <Box component="div" sx={{ flexGrow: 1 }}>
+                                <Typography variant="body1" component="div">
+                                  {item.name} (Qty: {item.quantity})
+                                </Typography>
+                                <Typography variant="body2" component="div">
+                                  Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}
+                                </Typography>
+                                <Typography variant="body2" component="div">
+                                  Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}
+                                </Typography>
+                                <Typography variant="body2" component="div">
+                                  Total Price: ₹{(item.price * item.quantity).toFixed(2)}
+                                </Typography>
+                                <Box display="flex" alignItems="center" mt={0.5}>
+                                  <Chip
+                                    label={item.orderStatus}
+                                    color={statusColors[item.orderStatus] || 'default'}
+                                    size="small"
+                                  />
+                                  {item.isDelivered && item.deliveredAt && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                      on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                                    </Typography>
+                                  )}
+                                  {item.isCancelled && item.cancelledAt && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                      on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                              <Box sx={{ minWidth: 150, textAlign: 'right' }}>
+                                <Typography variant="body1" fontWeight="medium">
+                                  ₹{(item.price * item.quantity).toFixed(2)}
+                                </Typography>
+                              </Box>
                             </ListItem>
                           ))}
                         </List>
-                      </Box>
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="subtitle2">Order Status:</Typography>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Chip 
-                            label={sellerOrder.orderStatus} 
-                            color={statusColors[sellerOrder.orderStatus] || 'default'} 
-                            size="small" 
-                          />
-                          {sellerOrder.deliveredAt && (
-                            <Typography variant="body2" color="text.secondary">
-                              Delivered on {format(new Date(sellerOrder.deliveredAt), 'MMM dd, yyyy')}
-                            </Typography>
-                          )}
-                        </Box>
                       </Box>
                       <Box display="flex" justifyContent="space-between" mt={1}>
                         <Typography variant="subtitle2">Subtotal:</Typography>
                         <Typography>₹{sellerOrder.totalPrice.toFixed(2)}</Typography>
                       </Box>
-                      {canCancelSellerOrder && (
-                        <Box mt={2} display="flex" justifyContent="flex-end">
-                          <Button 
-                            variant="outlined" 
-                            color="error"
-                            size="small"
-                            onClick={() => handleOpenCancelDialog(sellerOrder)}
-                          >
-                            Cancel This Seller Order
-                          </Button>
-                        </Box>
-                      )}
                     </AccordionDetails>
                   </Accordion>
                 );
@@ -323,6 +385,12 @@ function OrderDetails() {
                   <Typography>Tax</Typography>
                   <Typography>₹{order.taxPrice.toFixed(2)}</Typography>
                 </Box>
+                {totalSavings > 0 && (
+                  <Box display="flex" justifyContent="space-between" color="success.main">
+                    <Typography>Discount Savings</Typography>
+                    <Typography>-₹{totalSavings.toFixed(2)}</Typography>
+                  </Box>
+                )}
                 <Divider sx={{ my: 1 }} />
                 <Box display="flex" justifyContent="space-between" fontWeight="bold">
                   <Typography>Total</Typography>
@@ -335,35 +403,30 @@ function OrderDetails() {
       </Grid>
 
       <Box mt={3} display="flex" justifyContent="flex-end">
-        <Button 
-          component={Link} 
-          to="/my-orders" 
-          variant="contained" 
+        <Button
+          component={Link}
+          to="/my-orders"
+          variant="contained"
           color="primary"
         >
           Back to Orders
         </Button>
       </Box>
 
-      {/* Cancel Order Dialog */}
+      {/* Cancel Item Dialog */}
       <Dialog open={openCancelDialog} onClose={handleCloseCancelDialog}>
-        <DialogTitle>
-          Cancel Seller Order ({selectedSellerOrder?.seller?.name || 'Unknown Seller'})
-        </DialogTitle>
+        <DialogTitle>Cancel Item</DialogTitle>
         <DialogContent>
           <Typography variant="body1" gutterBottom>
-            You are about to cancel items from this seller:
+            Are you sure you want to cancel the following item?
           </Typography>
-          <List dense>
-            {selectedSellerOrder?.items.map((item) => (
-              <ListItem key={item._id}>
-                <ListItemText
-                  primary={`${item.name} (Qty: ${item.quantity})`}
-                  secondary={`₹${item.price.toFixed(2)} each`}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <Typography variant="subtitle1" gutterBottom>
+            {selectedItem?.name}
+          </Typography>
+          <Typography component="div">Quantity: {selectedItem?.quantity}</Typography>
+          <Typography component="div">Price: ₹{(selectedItem?.price * selectedItem?.quantity).toFixed(2)}</Typography>
+          <Typography component="div">Base Price: ₹{(selectedItem?.actualPrice * selectedItem?.quantity).toFixed(2)}</Typography>
+          <Typography component="div">Taxes ({selectedItem?.taxPercentage}%): ₹{(selectedItem?.taxes * selectedItem?.quantity).toFixed(2)}</Typography>
           <TextField
             autoFocus
             margin="dense"
@@ -378,9 +441,9 @@ function OrderDetails() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseCancelDialog}>Cancel</Button>
-          <Button 
-            onClick={handleCancelOrder} 
+          <Button onClick={handleCloseCancelDialog}>Close</Button>
+          <Button
+            onClick={handleCancelOrderItem}
             color="error"
             disabled={!cancelReason || isCancelling}
           >

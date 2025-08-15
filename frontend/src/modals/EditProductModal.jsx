@@ -34,6 +34,7 @@ function EditProductModal({ onClose }) {
       description: product.description,
       brand: product.brand,
       price: product.price,
+      taxPercentage: product.taxPercentage,
       discountPrice: product.discountPrice,
       stock: product.stock,
       category: product.category,
@@ -46,6 +47,7 @@ function EditProductModal({ onClose }) {
       description: product.description,
       brand: product.brand,
       price: product.price,
+      taxPercentage: product.taxPercentage,
       discountPrice: product.discountPrice,
       stock: product.stock,
       category: product.category,
@@ -141,6 +143,10 @@ function EditProductModal({ onClose }) {
             <div>
               <input type="number" {...register("price", { required: "Price is required" })} placeholder="Price" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
               {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
+            </div>
+            <div>
+              <input type="number" {...register("taxPercentage", { required: "Tax Percentage is required" })} placeholder="Tax Percentage" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
+              {errors.taxPercentage && <p className="text-red-500 text-sm mt-1">{errors.taxPercentage.message}</p>}
             </div>
             <div>
               <input type="number" {...register("discountPrice")} placeholder="Discount Price (optional)" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
