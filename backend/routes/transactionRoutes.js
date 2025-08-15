@@ -8,6 +8,7 @@ import {
   getUserTransactions,
   updateTransactionStatus,
   deleteTransaction,
+  getSellerTransactions,
 } from "../controllers/transactionController.js";
 import { protect, isSellerOrAdmin } from "../middleware/authMiddleware.js";
 
@@ -27,5 +28,8 @@ router.route("/admin").get(isSellerOrAdmin, getAllTransactions); // Get all tran
 router.route("/:id/status").put(isSellerOrAdmin, updateTransactionStatus); // Update transaction status (Admin)
 router.route("/:id").delete(isSellerOrAdmin, deleteTransaction); // Delete transaction (Admin)
 router.route("/user/:userId").get(isSellerOrAdmin, getUserTransactions); // Get all transactions for a specific user (Admin)
+router
+  .route("/seller-transactions")
+  .get(isSellerOrAdmin, getSellerTransactions); // Get seller transactions (Seller/Admin)
 
 export default router;

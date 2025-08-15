@@ -4,7 +4,7 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // ✅ QUERY: Fetch all seller orders
     getSellerOrders: builder.query({
-      query: ({page}) => `/seller-orders?page=${page}`,
+      query: ({ page }) => `/seller-orders?page=${page}`,
       providesTags: ["SellerOrder"],
     }),
 
@@ -14,29 +14,31 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
       providesTags: (result, error, id) => [{ type: "SellerOrder", id }],
     }),
 
-    // ✅ MUTATION: Update seller order status
-    updateSellerOrderStatus: builder.mutation({
-      query: ({ id, status }) => ({
-        url: `/seller-orders/${id}/status`,
+    // ✅ MUTATION: Update seller order item status
+    updateSellerOrderItemStatus: builder.mutation({
+      query: ({ id, productId, status }) => ({
+        url: `/seller-orders/${id}/item-status`,
         method: "PUT",
-        body: { status },
+        body: { productId, status },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "SellerOrder", id },
-        "SellerOrder", // also invalidate the list
+        "SellerOrder",
+        "Order",
       ],
     }),
 
-    // ✅ MUTATION: Cancel a seller order
-    cancelSellerOrder: builder.mutation({
-      query: ({ id, reason }) => ({
-        url: `/seller-orders/${id}/cancel`,
+    // ✅ MUTATION: Cancel a seller order item
+    cancelSellerOrderItem: builder.mutation({
+      query: ({ id, productId, reason }) => ({
+        url: `/seller-orders/${id}/cancel-item`,
         method: "PUT",
-        body: { reason },
+        body: { productId, reason },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "SellerOrder", id },
-        "SellerOrder", // also invalidate the list
+        "SellerOrder",
+        "Order",
       ],
     }),
   }),
@@ -45,6 +47,6 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
 export const {
   useGetSellerOrdersQuery,
   useGetSellerOrderByIdQuery,
-  useUpdateSellerOrderStatusMutation,
-  useCancelSellerOrderMutation,
+  useUpdateSellerOrderItemStatusMutation,
+  useCancelSellerOrderItemMutation,
 } = sellerOrderApiSlice;

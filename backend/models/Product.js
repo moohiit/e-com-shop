@@ -25,6 +25,18 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    actualPrice: {
+      type: Number,
+      required: true,
+    },
+    taxPercentage: {
+      type: Number,
+      default:0
+    },
+    taxes: {
+      type: Number,
+      required: true,
+    },
     discountPrice: {
       type: Number,
       default: 0,

@@ -9,6 +9,7 @@ export const createProduct = async (req, res) => {
       name,
       description,
       brand,
+      taxPercentage,
       price,
       discountPrice,
       stock,
@@ -23,6 +24,7 @@ export const createProduct = async (req, res) => {
       !name ||
       !slug ||
       !description ||
+      !taxPercentage ||
       !price ||
       !stock ||
       !images ||
@@ -41,11 +43,18 @@ export const createProduct = async (req, res) => {
         .json({ success: false, message: "Product slug already exists." });
     }
 
+    // calculate actualPrice (excluding tax) from a tax-inclusive price
+    const actualPrice = parseFloat(price / (1 + taxPercentage / 100)).toFixed(2);
+    const taxes = parseFloat(price - actualPrice).toFixed(2);
+
     const product = new Product({
       name,
       slug,
       description,
       brand: brand || "",
+      taxPercentage,
+      actualPrice,
+      taxes,
       price,
       discountPrice: discountPrice || price,
       stock,
@@ -397,6 +406,7 @@ export const updateProduct = async (req, res) => {
       "name",
       "description",
       "price",
+      "taxPercentage",
       "discountPrice",
       "brand",
       "category",
@@ -409,7 +419,11 @@ export const updateProduct = async (req, res) => {
         product[field] = req.body[field];
       }
     });
-
+    // calculate actualPrice (excluding tax) from a tax-inclusive price
+    const actualPrice = parseFloat(req.body.price / (1 + req.body.taxPercentage / 100)).toFixed(2);
+    const taxes = parseFloat(req.body.price - actualPrice).toFixed(2);
+    product.actualPrice = actualPrice || product.actualPrice;
+    product.taxes = taxes || product.taxes;
     if (req.body.name) {
       const rawName = req.body.name.replace(/['"]/g, "");
       product.slug = slugify(rawName, { lower: true, strict: true });

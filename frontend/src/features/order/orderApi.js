@@ -57,17 +57,18 @@ export const orderApi = apiSlice.injectEndpoints({
       ],
     }),
 
-    // ✅ Cancel Order
-    cancelOrder: builder.mutation({
-      query: ({ id, reason }) => ({
-        url: `/orders/${id}/cancel`,
+    // ✅ Cancel Order Item
+    cancelOrderItem: builder.mutation({
+      query: ({ id, productId, reason }) => ({
+        url: `/orders/${id}/cancel-item`,
         method: "PUT",
-        body: { reason },
+        body: { productId, reason },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Order", id },
         "MyOrder",
         "AdminOrder",
+        "SellerOrder",
       ],
     }),
   }),
@@ -80,5 +81,5 @@ export const {
   useGetOrderByIdQuery,
   useUpdateOrderToPaidMutation,
   useDeleteOrderMutation,
-  useCancelOrderMutation,
+  useCancelOrderItemMutation,
 } = orderApi;
