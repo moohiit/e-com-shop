@@ -41,7 +41,7 @@ const PaymentForm = ({ onBack, onNext }) => {
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
             <label htmlFor="online" className="ml-2">
-              Online Payment (Simulated)
+              Online Payment
             </label>
           </div>
         </div>

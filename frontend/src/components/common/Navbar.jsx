@@ -29,6 +29,7 @@ const Navbar = () => {
   const { darkMode, toggleTheme } = useTheme();
   const { user } = useSelector((state) => state.auth);
   const { items: cartItems } = useSelector((state) => state.cart);
+  const wishlistItems = useSelector((state) => state.wishlist); // Get wishlist from Redux
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -84,7 +85,6 @@ const Navbar = () => {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 style={{
                   backgroundColor: "transparent",
-                  // Ensure no other background styles interfere
                 }}
               />
             </Link>
@@ -132,9 +132,11 @@ const Navbar = () => {
                     size={18}
                     className="text-gray-700 dark:text-gray-300 group-hover:text-pink-500 transition-colors"
                   />
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    0
-                  </span>
+                  {wishlistItems?.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {wishlistItems.length}
+                    </span>
+                  )}
                 </Link>
                 <Link to="/cart" className="relative group">
                   <FaShoppingCart
@@ -268,12 +270,17 @@ const Navbar = () => {
 
               {user && user.role === "user" && (
                 <div className="flex items-center space-x-4 px-3">
-                  {user.role}
                   <Link
                     to="/wishlist"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="relative"
                   >
                     <FaHeart size={18} />
+                    {wishlistItems?.length > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {wishlistItems.length}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     to="/cart"
