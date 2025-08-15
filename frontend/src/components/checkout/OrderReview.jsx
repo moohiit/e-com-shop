@@ -7,6 +7,8 @@ import {
 } from "../../features/transaction/transactionApi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FaArrowLeft, FaBox, FaShippingFast, FaMoneyBillWave, FaCreditCard } from "react-icons/fa";
 
 const OrderReview = ({ onBack, selectedAddress }) => {
   const user = useSelector((state) => state.auth.user);
@@ -51,6 +53,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
     });
   };
 
+
   const { itemsPrice, shippingPrice, taxPrice, totalPrice } = calculatePrices();
 
   // Handle order placement (create order and initiate payment if needed)
@@ -74,6 +77,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           seller: item?.seller?._id,
         })),
         shippingAddress: selectedAddress._id,
+        shippingAddress: selectedAddress._id,
         paymentMethod,
         itemsPrice,
         shippingPrice,
@@ -85,6 +89,9 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       if (paymentMethod === "Cash on Delivery") {
         dispatch(clearCart());
         toast.success("Order placed successfully (Cash on Delivery)");
+        navigate("/order-success", {
+          state: { orderId: response.order._id, totalPrice },
+        });
         navigate("/order-success", {
           state: { orderId: response.order._id, totalPrice },
         });
@@ -125,6 +132,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
               razorpaySignature: response.razorpay_signature,
               orderId,
               email: user.email,
+              email: user.email,
             }).unwrap();
 
             dispatch(clearCart());
@@ -139,6 +147,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         },
         prefill: {
           name: selectedAddress.fullName,
+          email: user.email,
           email: user.email,
           contact: selectedAddress.mobileNumber,
         },
@@ -184,21 +193,26 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         <p className="font-semibold">Total Price: ₹{totalPrice.toFixed(2)}</p>
       </div>
 
-      <div className="flex justify-between">
-        <button
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4">
+        <motion.button
           onClick={onBack}
-          className="bg-gray-600 text-white py-2 px-4 rounded"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          Back
-        </button>
-        <button
+          <FaArrowLeft /> Back
+        </motion.button>
+        <motion.button
           onClick={handleOrderPlacement}
-          className="bg-green-600 text-white py-2 px-4 rounded"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
         >
-          Place Order
-        </button>
+          {paymentMethod === "Cash on Delivery" ? "Place Order" : "Proceed to Payment"}
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

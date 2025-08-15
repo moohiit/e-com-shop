@@ -58,7 +58,7 @@ export function AppRouter() {
           <Route index element={<Home />} />
           <Route path="dashboard" element={<RoleBasedRedirect />} />
           <Route path="products" element={<ProductListing />} />
-          <Route path="products/:id" element={<ProductDetail />} />
+          <Route path="product/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
