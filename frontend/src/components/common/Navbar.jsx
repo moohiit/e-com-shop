@@ -21,7 +21,6 @@ import {
   FaTachometerAlt,
 } from "react-icons/fa";
 import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
 import SearchBar from "./SearchBar";
 import { logoutUser } from "../../features/auth/authSlice";
 
@@ -65,7 +64,7 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed w-full z-50 transition-all duration-300 ${
+      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
         scrolled
           ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
           : "bg-white dark:bg-gray-900"
