@@ -10,7 +10,7 @@ import Pagination from "../../components/common/Pagination";
 export default function ProductListing() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Function to parse query parameters
   const parseQueryParams = () => {
     const queryParams = new URLSearchParams(location.search);
@@ -20,12 +20,12 @@ export default function ProductListing() {
       minPrice: Number(queryParams.get("minPrice")) || 0,
       maxPrice: Number(queryParams.get("maxPrice")) || 10000,
       page: Number(queryParams.get("page")) || 1,
+      sort: queryParams.get("sort") || "latest",
     };
   };
 
   // Initialize state from URL query parameters
   const [filters, setFilters] = useState(parseQueryParams());
-  const [sortBy, setSortBy] = useState("default");
   const [showFilters, setShowFilters] = useState(false);
 
   // Update state when URL changes
@@ -39,6 +39,7 @@ export default function ProductListing() {
     category: filters.category !== "all" ? filters.category : undefined,
     minPrice: filters.minPrice || undefined,
     maxPrice: filters.maxPrice || undefined,
+    sort: filters.sort,
     page: filters.page,
     limit: 12,
   });
@@ -52,6 +53,7 @@ export default function ProductListing() {
     if (newFilters.category !== "all") params.set("category", newFilters.category);
     if (newFilters.minPrice > 0) params.set("minPrice", newFilters.minPrice.toString());
     if (newFilters.maxPrice < 10000) params.set("maxPrice", newFilters.maxPrice.toString());
+    if (newFilters.sort !== "latest") params.set("sort", newFilters.sort);
     if (newFilters.page > 1) params.set("page", newFilters.page.toString());
 
     navigate(`?${params.toString()}`, { replace: true });
@@ -73,6 +75,7 @@ export default function ProductListing() {
       category: "all",
       minPrice: 0,
       maxPrice: 10000,
+      sort: "latest",
       page: 1,
     };
     handleFilterChange(resetFilters);
@@ -89,15 +92,6 @@ export default function ProductListing() {
 
   const products = productsData?.products || [];
   const pagination = productsData?.pagination || { total: 0, pages: 1 };
-
-  // Frontend sorting
-  const sortedProducts = [...products].sort((a, b) => {
-    if (sortBy === "price-low-high") return a.price - b.price;
-    if (sortBy === "price-high-low") return b.price - a.price;
-    if (sortBy === "name-a-z") return a.name.localeCompare(b.name);
-    if (sortBy === "name-z-a") return b.name.localeCompare(a.name);
-    return 0;
-  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -132,7 +126,7 @@ export default function ProductListing() {
               <input
                 type="text"
                 value={filters.search}
-                onChange={(e) => handleFilterChange({ ...filters, search: e.target.value })}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 placeholder="Search products..."
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
               />
@@ -143,7 +137,7 @@ export default function ProductListing() {
               <label className="block mb-2 font-medium">Categories</label>
               <select
                 value={filters.category}
-                onChange={(e) => handleFilterChange({ ...filters, category: e.target.value })}
+                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
               >
                 <option value="all">All Categories</option>
@@ -162,7 +156,7 @@ export default function ProductListing() {
                 <input
                   type="number"
                   value={filters.minPrice}
-                  onChange={(e) => handleFilterChange({ ...filters, minPrice: Number(e.target.value) })}
+                  onChange={(e) => setFilters({ ...filters, minPrice: Number(e.target.value) })}
                   className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
                   min={0}
                   placeholder="Min"
@@ -171,16 +165,31 @@ export default function ProductListing() {
                 <input
                   type="number"
                   value={filters.maxPrice}
-                  onChange={(e) => handleFilterChange({ ...filters, maxPrice: Number(e.target.value) })}
+                  onChange={(e) => setFilters({ ...filters, maxPrice: Number(e.target.value) })}
                   className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
                   min={0}
                   placeholder="Max"
                 />
               </div>
               <div className="flex justify-between text-xs text-gray-500">
-                <span>${filters.minPrice}</span>
-                <span>${filters.maxPrice}</span>
+                <span>₹{filters.minPrice}</span>
+                <span>₹{filters.maxPrice}</span>
               </div>
+            </div>
+
+            {/* Sort Options */}
+            <div>
+              <label className="block mb-2 font-medium">Sort By</label>
+              <select
+                value={filters.sort}
+                onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+                className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+              >
+                <option value="latest">Latest</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+              </select>
             </div>
 
             <button
@@ -194,25 +203,11 @@ export default function ProductListing() {
 
         {/* Main Content */}
         <div className="flex-1">
-          {/* Sorting and Results Count */}
+          {/* Results Count */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <p className="text-gray-600 dark:text-gray-400">
               Showing {products.length} of {pagination.total} products
             </p>
-            <div className="flex items-center gap-2">
-              <label className="whitespace-nowrap">Sort by:</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-              >
-                <option value="default">Default</option>
-                <option value="price-low-high">Price: Low to High</option>
-                <option value="price-high-low">Price: High to Low</option>
-                <option value="name-a-z">Name: A to Z</option>
-                <option value="name-z-a">Name: Z to A</option>
-              </select>
-            </div>
           </div>
 
           {/* Product Grid */}
@@ -220,7 +215,7 @@ export default function ProductListing() {
             <div className="flex justify-center items-center h-64">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-          ) : sortedProducts.length === 0 ? (
+          ) : products.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-lg text-gray-600 dark:text-gray-400">
                 No products found. Try adjusting your filters.
@@ -235,7 +230,7 @@ export default function ProductListing() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedProducts.map((product) => (
+                {products.map((product) => (
                   <motion.div
                     key={product._id}
                     initial={{ opacity: 0, y: 20 }}

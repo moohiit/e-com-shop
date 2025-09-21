@@ -10,6 +10,7 @@ export const createOrder = async (req, res) => {
       shippingAddress,
       paymentMethod,
       itemsPrice,
+      totalDiscount,
       shippingPrice,
       taxPrice,
       totalPrice,
@@ -23,8 +24,10 @@ export const createOrder = async (req, res) => {
 
     // Validate products and adjust stock
     let calculatedItemsPrice = 0;
+    let calculatedTotalDiscount = 0;
     let calculatedTaxPrice = 0;
-    let calculatedTotalItemPrice = 0; // Sum of item.price * quantity (includes taxes)
+    let calculatedTotalPrice = 0;
+    
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
       if (!product) {
@@ -32,48 +35,77 @@ export const createOrder = async (req, res) => {
           .status(404)
           .json({ success: false, message: `Product not found: ${item.name}` });
       }
+      
       if (product.stock < item.quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for: ${item.name}`,
+          message: `Insufficient stock for: ${item.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
         });
       }
-      // Validate that the provided price matches the product's price (including taxes)
-      if (item.price !== product.price) {
+      
+      // Calculate expected values based on product data
+      const expectedBasePrice = product.basePrice;
+      const expectedDiscountAmount = product.discountAmount;
+      const expectedTaxAmount = product.taxAmount;
+      const expectedFinalPrice = product.finalPrice;
+      
+      // Validate provided prices match product calculations
+      if (item.basePrice !== expectedBasePrice) {
         return res.status(400).json({
           success: false,
-          message: `Price mismatch for: ${item.name}. Expected ₹${product.price}, got ₹${item.price}`,
+          message: `Base price mismatch for: ${item.name}. Expected ₹${expectedBasePrice}, got ₹${item.basePrice}`,
         });
       }
-      // Validate that provided actualPrice and taxes match product
-      if (item.actualPrice !== product.actualPrice || item.taxes !== product.taxes) {
+      
+      if (item.price !== expectedFinalPrice) {
         return res.status(400).json({
           success: false,
-          message: `Price details mismatch for: ${item.name}. Expected actualPrice=₹${product.actualPrice}, taxes=₹${product.taxes}`,
+          message: `Final price mismatch for: ${item.name}. Expected ₹${expectedFinalPrice}, got ₹${item.price}`,
         });
       }
-      calculatedItemsPrice += product.actualPrice * item.quantity;
-      calculatedTaxPrice += product.taxes * item.quantity;
-      calculatedTotalItemPrice += product.price * item.quantity;
+      
+      // Update calculated totals
+      calculatedItemsPrice += expectedBasePrice * item.quantity;
+      calculatedTotalDiscount += expectedDiscountAmount * item.quantity;
+      calculatedTaxPrice += expectedTaxAmount * item.quantity;
+      calculatedTotalPrice += expectedFinalPrice * item.quantity;
+      
+      // Update product stock
       product.stock -= item.quantity;
       await product.save();
     }
 
-    // Validate provided prices
-    const expectedItemsPrice = Number(calculatedItemsPrice.toFixed(2));
-    const expectedTaxPrice = Number(calculatedTaxPrice.toFixed(2));
-    const expectedTotalPrice = Number(
-      (calculatedTotalItemPrice + shippingPrice).toFixed(2)
-    );
+    // Add shipping price to calculated total
+    calculatedTotalPrice += shippingPrice;
 
-    if (
-      expectedItemsPrice !== Number(itemsPrice.toFixed(2)) ||
-      expectedTaxPrice !== Number(taxPrice.toFixed(2)) ||
-      expectedTotalPrice !== Number(totalPrice.toFixed(2))
-    ) {
+    // Validate provided prices match calculations
+    const tolerance = 0.01; // Allow for small rounding differences
+    
+    if (Math.abs(calculatedItemsPrice - itemsPrice) > tolerance) {
       return res.status(400).json({
         success: false,
-        message: `Price validation failed. Expected: itemsPrice=₹${expectedItemsPrice}, taxPrice=₹${expectedTaxPrice}, totalPrice=₹${expectedTotalPrice}`,
+        message: `Items price validation failed. Expected: ₹${calculatedItemsPrice.toFixed(2)}, Got: ₹${itemsPrice.toFixed(2)}`,
+      });
+    }
+    
+    if (Math.abs(calculatedTotalDiscount - totalDiscount) > tolerance) {
+      return res.status(400).json({
+        success: false,
+        message: `Discount validation failed. Expected: ₹${calculatedTotalDiscount.toFixed(2)}, Got: ₹${totalDiscount.toFixed(2)}`,
+      });
+    }
+    
+    if (Math.abs(calculatedTaxPrice - taxPrice) > tolerance) {
+      return res.status(400).json({
+        success: false,
+        message: `Tax validation failed. Expected: ₹${calculatedTaxPrice.toFixed(2)}, Got: ₹${taxPrice.toFixed(2)}`,
+      });
+    }
+    
+    if (Math.abs(calculatedTotalPrice - totalPrice) > tolerance) {
+      return res.status(400).json({
+        success: false,
+        message: `Total price validation failed. Expected: ₹${calculatedTotalPrice.toFixed(2)}, Got: ₹${totalPrice.toFixed(2)}`,
       });
     }
 
@@ -85,18 +117,21 @@ export const createOrder = async (req, res) => {
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        actualPrice: item.actualPrice,
-        taxes: item.taxes,
+        basePrice: item.basePrice,
+        discountPercentage: item.discountPercentage,
+        discountAmount: item.discountAmount,
         taxPercentage: item.taxPercentage,
+        taxAmount: item.taxAmount,
         seller: item.seller,
         orderStatus: "Processing",
         isCancelled: false,
         isDelivered: false,
       })),
       shippingAddress,
-      shippingPrice,
       paymentMethod,
       itemsPrice,
+      totalDiscount,
+      shippingPrice,
       taxPrice,
       totalPrice,
     });
@@ -116,16 +151,25 @@ export const createOrder = async (req, res) => {
 
     for (const sellerId in sellerGroups) {
       const sellerItems = sellerGroups[sellerId];
+      
       const sellerItemsPrice = sellerItems.reduce(
-        (sum, item) => sum + item.actualPrice * item.quantity,
+        (sum, item) => sum + item.basePrice * item.quantity,
         0
       );
+      
+      const sellerTotalDiscount = sellerItems.reduce(
+        (sum, item) => sum + item.discountAmount * item.quantity,
+        0
+      );
+      
       const sellerTaxPrice = sellerItems.reduce(
-        (sum, item) => sum + item.taxes * item.quantity,
+        (sum, item) => sum + item.taxAmount * item.quantity,
         0
       );
-      const sellerTotalPrice = Number(
-        sellerItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)
+      
+      const sellerTotalPrice = sellerItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
       );
 
       const sellerOrder = new SellerOrder({
@@ -137,14 +181,17 @@ export const createOrder = async (req, res) => {
           name: item.name,
           quantity: item.quantity,
           price: item.price,
-          actualPrice: item.actualPrice,
-          taxes: item.taxes,
+          basePrice: item.basePrice,
+          discountPercentage: item.discountPercentage,
+          discountAmount: item.discountAmount,
           taxPercentage: item.taxPercentage,
+          taxAmount: item.taxAmount,
           orderStatus: "Processing",
           isCancelled: false,
           isDelivered: false,
         })),
         itemsPrice: sellerItemsPrice,
+        totalDiscount: sellerTotalDiscount,
         taxPrice: sellerTaxPrice,
         totalPrice: sellerTotalPrice,
       });
@@ -163,7 +210,7 @@ export const createOrder = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Order creation error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create order",
@@ -175,11 +222,10 @@ export const createOrder = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = 10; // Number of orders per page
+    const limit = 10;
     const skip = (page - 1) * limit;
-    const totalOrders = await Order.countDocuments({
-      user: req.user._id,
-    });
+    
+    const totalOrders = await Order.countDocuments({ user: req.user._id });
     const totalPages = Math.ceil(totalOrders / limit);
 
     const orders = await Order.find({ user: req.user._id })
@@ -187,13 +233,15 @@ export const getMyOrders = async (req, res) => {
         { path: "user", select: "name email" },
         {
           path: "shippingAddress",
-          select:
-            "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+          select: "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
         },
         {
           path: "orderItems.product",
-          select:
-            "name description brand price discountPrice images category isActive",
+          select: "name description brand basePrice discountPercentage taxPercentage images categories isActive",
+          populate: {
+            path: "categories",
+            select: "name slug",
+          },
         },
         {
           path: "sellerOrders",
@@ -215,7 +263,7 @@ export const getMyOrders = async (req, res) => {
       message: "My orders fetched successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get my orders error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch orders",
@@ -230,13 +278,15 @@ export const getOrderById = async (req, res) => {
       { path: "user", select: "name email" },
       {
         path: "shippingAddress",
-        select:
-          "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+        select: "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
       },
       {
         path: "orderItems.product",
-        select:
-          "name description brand price discountPrice images category isActive",
+        select: "name description brand basePrice discountPercentage taxPercentage images categories isActive",
+        populate: {
+          path: "categories",
+          select: "name slug",
+        },
       },
       {
         path: "sellerOrders",
@@ -264,7 +314,7 @@ export const getOrderById = async (req, res) => {
 
     res.json({ order, success: true, message: "Order fetched successfully" });
   } catch (error) {
-    console.error(error);
+    console.error("Get order by ID error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch order",
@@ -276,8 +326,9 @@ export const getOrderById = async (req, res) => {
 export const getAllOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = 10; // Number of orders per page
+    const limit = 10;
     const skip = (page - 1) * limit;
+    
     const totalOrders = await Order.countDocuments();
     const totalPages = Math.ceil(totalOrders / limit);
 
@@ -286,15 +337,23 @@ export const getAllOrders = async (req, res) => {
         { path: "user", select: "name email" },
         {
           path: "shippingAddress",
-          select:
-            "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
+          select: "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
         },
         {
           path: "orderItems.product",
-          select:
-            "name description brand price discountPrice images category isActive",
+          select: "name description brand basePrice discountPercentage taxPercentage images categories isActive",
+          populate: {
+            path: "categories",
+            select: "name slug",
+          },
         },
-        { path: "sellerOrders" },
+        { 
+          path: "sellerOrders",
+          populate: {
+            path: "seller",
+            select: "name email",
+          },
+        },
       ])
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -308,7 +367,7 @@ export const getAllOrders = async (req, res) => {
       message: "All orders fetched successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get all orders error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch orders",
@@ -327,17 +386,26 @@ export const deleteOrder = async (req, res) => {
         .json({ success: false, message: "Order not found" });
     }
 
+    // Restore product stock before deleting
+    for (const item of order.orderItems) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.stock += item.quantity;
+        await product.save();
+      }
+    }
+
     // Delete all linked SellerOrders
     await SellerOrder.deleteMany({ _id: { $in: order.sellerOrders } });
 
-    await order.remove();
+    await Order.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
       message: "Order and associated seller orders deleted successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Delete order error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to delete order",
@@ -349,37 +417,41 @@ export const deleteOrder = async (req, res) => {
 export const cancelOrderItem = async (req, res) => {
   try {
     const { reason, productId } = req.body;
+    
     if (!reason || !productId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Cancellation reason and product ID are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason and product ID are required",
+      });
     }
 
     const order = await Order.findById(req.params.id);
+    
     if (!order || order.user._id.toString() !== req.user._id.toString()) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found or not authorized" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Order not found or not authorized" 
+      });
     }
 
     // Find the order item to cancel
     const orderItem = order.orderItems.find(
       (item) => item.product.toString() === productId
     );
+    
     if (!orderItem) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found in order" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Product not found in order" 
+      });
     }
 
     // Check if the item is already delivered or cancelled
     if (orderItem.isDelivered || orderItem.isCancelled) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Order item cannot be cancelled" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Order item cannot be cancelled" 
+      });
     }
 
     // Update order item status
@@ -388,21 +460,29 @@ export const cancelOrderItem = async (req, res) => {
     orderItem.cancelledAt = new Date();
     orderItem.orderStatus = "Cancelled";
 
+    // Restore product stock
+    const product = await Product.findById(productId);
+    if (product) {
+      product.stock += orderItem.quantity;
+      await product.save();
+    }
+
     // Update corresponding SellerOrder item
     const sellerOrder = await SellerOrder.findOne({
       order: order._id,
       seller: orderItem.seller,
     });
+    
     if (sellerOrder) {
       const sellerOrderItem = sellerOrder.items.find(
         (item) => item.product.toString() === productId
       );
+      
       if (sellerOrderItem) {
         sellerOrderItem.cancellationReason = reason;
         sellerOrderItem.isCancelled = true;
         sellerOrderItem.cancelledAt = new Date();
         sellerOrderItem.orderStatus = "Cancelled";
-
         await sellerOrder.save();
       }
     }
@@ -415,9 +495,10 @@ export const cancelOrderItem = async (req, res) => {
       order,
     });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to cancel order item" });
+    console.error("Cancel order item error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to cancel order item" 
+    });
   }
 };

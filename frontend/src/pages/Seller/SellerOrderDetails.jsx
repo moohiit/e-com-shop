@@ -82,7 +82,7 @@ function SellerOrderDetails() {
   const totalSavings = useMemo(() => {
     if (!order?.items) return 0;
     return order.items.reduce((sum, item) => {
-      const originalPrice = item.actualPrice || 0;
+      const originalPrice = item.basePrice || 0;
       const finalPrice = item.price || 0;
       return sum + (originalPrice - finalPrice) * item.quantity;
     }, 0);
@@ -317,6 +317,16 @@ function SellerOrderDetails() {
                   </Typography>
                   <Typography fontWeight={500}>{order.order?.shippingAddress?.mobileNumber}</Typography>
                 </Box>
+                <Box mt={2}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Payment Status
+                  </Typography>
+                  <Chip
+                    label={order.order?.isPaid ? 'Paid' : 'Pending'}
+                    color={order.order?.isPaid ? 'success' : 'warning'}
+                    size="small"
+                  />
+                </Box>
               </Box>
             </CardContent>
           </Card>
@@ -370,10 +380,15 @@ function SellerOrderDetails() {
                           </Typography>
                           <Box mt={1}>
                             <Typography variant="body2">
-                              Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}
+                              Base Price: ₹{(item.basePrice * item.quantity).toFixed(2)}
                             </Typography>
+                            {item.discountAmount > 0 && (
+                              <Typography variant="body2" color="error">
+                                Discount ({item.discountPercentage || 0}%): ₹{(item.discountAmount * item.quantity).toFixed(2)}
+                              </Typography>
+                            )}
                             <Typography variant="body2">
-                              Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}
+                              Taxes ({item.taxPercentage || 0}%): ₹{(item.taxAmount * item.quantity).toFixed(2)}
                             </Typography>
                             <Typography variant="body2" fontWeight={500}>
                               Total Price: ₹{(item.price * item.quantity).toFixed(2)}
@@ -473,6 +488,12 @@ function SellerOrderDetails() {
                   <Typography>Items Price</Typography>
                   <Typography>₹{order.itemsPrice.toFixed(2)}</Typography>
                 </Box>
+                {order.totalDiscount > 0 && (
+                  <Box display="flex" justifyContent="space-between" color="error.main">
+                    <Typography>Total Discount</Typography>
+                    <Typography>-₹{order.totalDiscount.toFixed(2)}</Typography>
+                  </Box>
+                )}
                 <Box display="flex" justifyContent="space-between">
                   <Typography>Tax</Typography>
                   <Typography>₹{order.taxPrice?.toFixed(2)}</Typography>
@@ -515,8 +536,13 @@ function SellerOrderDetails() {
           </Typography>
           <Box sx={{ '& > *:not(:last-child)': { mb: 0.5 } }}>
             <Typography>Quantity: {selectedItem?.quantity}</Typography>
-            <Typography>Base Price: ₹{(selectedItem?.actualPrice * selectedItem?.quantity).toFixed(2)}</Typography>
-            <Typography>Taxes ({selectedItem?.taxPercentage}%): ₹{(selectedItem?.taxes * selectedItem?.quantity).toFixed(2)}</Typography>
+            <Typography>Base Price: ₹{(selectedItem?.basePrice * selectedItem?.quantity).toFixed(2)}</Typography>
+            {selectedItem?.discountAmount > 0 && (
+              <Typography color="error">
+                Discount ({selectedItem?.discountPercentage || 0}%): ₹{(selectedItem?.discountAmount * selectedItem?.quantity).toFixed(2)}
+              </Typography>
+            )}
+            <Typography>Taxes ({selectedItem?.taxPercentage || 0}%): ₹{(selectedItem?.taxAmount * selectedItem?.quantity).toFixed(2)}</Typography>
             <Typography fontWeight={500}>Total Price: ₹{(selectedItem?.price * selectedItem?.quantity).toFixed(2)}</Typography>
           </Box>
           <TextField

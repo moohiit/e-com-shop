@@ -22,10 +22,12 @@ const sellerOrderSchema = new mongoose.Schema(
         },
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
-        price: { type: Number, required: true }, // Total price including taxes
-        actualPrice: { type: Number, required: true }, // Base price without taxes
-        taxes: { type: Number, required: true }, // Tax amount
-        taxPercentage: { type: Number, default: 0 }, // Tax percentage
+        price: { type: Number, required: true }, // Final price including taxes
+        basePrice: { type: Number, required: true }, // Base price without discount
+        discountPercentage: { type: Number, default: 0 },
+        discountAmount: { type: Number, default: 0 },
+        taxPercentage: { type: Number, default: 0 },
+        taxAmount: { type: Number, default: 0 },
         orderStatus: {
           type: String,
           enum: ["Processing", "Shipped", "Delivered", "Cancelled"],
@@ -38,9 +40,11 @@ const sellerOrderSchema = new mongoose.Schema(
         deliveredAt: { type: Date },
       },
     ],
-    itemsPrice: { type: Number, required: true },
-    taxPrice: { type: Number, required: true },
-    totalPrice: { type: Number, required: true },
+    itemsPrice: { type: Number, required: true }, // Total base price
+    totalDiscount: { type: Number, required: true, default: 0 }, // Total discount amount
+    taxPrice: { type: Number, required: true }, // Total tax amount
+    totalPrice: { type: Number, required: true }, // Final total
+
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
     transaction: { type: mongoose.Schema.Types.ObjectId, ref: "Transaction" },

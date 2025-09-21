@@ -1,160 +1,199 @@
-// Updated Category Controller with multi-parent hierarchy support
-
-import Category from "../models/Category.js";
 import mongoose from "mongoose";
 import slugify from "slugify";
+import Category from "../models/Category.js";
 
-// @desc    Create a new category
-// @route   POST /api/categories
-// @access  Private/Seller or Admin
+/**
+ * Helper to compute ancestor IDs for a set of parents.
+ */
+async function buildAncestors(parents = []) {
+  if (!parents.length) return [];
+  const parentDocs = await Category.find({ _id: { $in: parents } });
+  const ancestorsSet = new Set();
+  parentDocs.forEach((p) => {
+    p.ancestors.forEach((id) => ancestorsSet.add(id.toString()));
+    ancestorsSet.add(p._id.toString());
+  });
+  return [...ancestorsSet];
+}
+
+/** -------------------- Create -------------------- */
 export const createCategory = async (req, res) => {
   try {
-    const { name, parents = [] } = req.body;
+    const { name, parents = [], image = "" } = req.body;
 
+    if (!name?.trim()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Name is required." });
+    }
     const rawName = name.replace(/['"]/g, "");
     const slug = slugify(rawName, { lower: true });
 
-    if (!name || !slug) {
-      return res.status(400).json({ success: false, message: "Name and slug are required." });
+    // Ensure uniqueness for name or slug
+    const exists = await Category.findOne({ $or: [{ name }, { slug }] });
+    if (exists) {
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "Category name or slug already exists.",
+        });
     }
 
-    const existing = await Category.findOne({ $or: [{ name }, { slug }] });
-    if (existing) {
-      return res.status(409).json({ success: false, message: "Category name or slug already exists." });
-    }
+    const ancestors = await buildAncestors(parents);
 
-    // Compute ancestors
-    let ancestorsSet = new Set();
-    if (parents.length) {
-      const parentCats = await Category.find({ _id: { $in: parents } });
-      for (const parent of parentCats) {
-        parent.ancestors.forEach(id => ancestorsSet.add(id.toString()));
-        ancestorsSet.add(parent._id.toString());
-      }
-    }
-
-    const newCategory = new Category({
+    const category = await Category.create({
       name,
       slug,
       parents,
-      ancestors: [...ancestorsSet],
+      ancestors,
+      image,
     });
 
-    const savedCategory = await newCategory.save();
-    res.status(201).json({ success: true, category: savedCategory });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(201).json({ success: true, category });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get all active categories
-export const getCategories = async (req, res) => {
+/** -------------------- Read -------------------- */
+export const getCategories = async (_req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).populate("parents");
+    const categories = await Category.find({ isActive: true }).populate(
+      "parents",
+      "name slug image"
+    );
     res.json({ success: true, categories });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get all categories (active or inactive)
-export const getAllCategories = async (req, res) => {
+export const getAllCategories = async (_req, res) => {
   try {
-    const categories = await Category.find().populate("parents");
+    const categories = await Category.find().populate(
+      "parents",
+      "name slug image"
+    );
     res.json({ success: true, categories });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get a category by ID
 export const getCategoryById = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid ID format." });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
-    const category = await Category.findById(req.params.id).populate("parents");
+    const category = await Category.findById(id).populate(
+      "parents",
+      "name slug image"
+    );
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     res.json({ success: true, category });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Update a category
+/** -------------------- Update -------------------- */
 export const updateCategory = async (req, res) => {
   try {
-    const { name, parents = [] } = req.body;
-    const rawName = name.replace(/['"]/g, "");
-    const slug = slugify(rawName, { lower: true });
+    const { id } = req.params;
+    const { name, parents = [], image } = req.body;
 
-    if (!name || !slug) {
-      return res.status(400).json({ success: false, message: "Name and slug are required." });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid ID format." });
-    }
-
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(id);
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
-    category.name = name;
-    category.slug = slug;
-    category.parents = parents;
-
-    // Recompute ancestors
-    let ancestorsSet = new Set();
-    if (parents.length) {
-      const parentCats = await Category.find({ _id: { $in: parents } });
-      for (const parent of parentCats) {
-        parent.ancestors.forEach(id => ancestorsSet.add(id.toString()));
-        ancestorsSet.add(parent._id.toString());
+    if (name) {
+      const rawName = name.replace(/['"]/g, "");
+      const slug = slugify(rawName, { lower: true });
+      // check uniqueness excluding current category
+      const exists = await Category.findOne({
+        _id: { $ne: id },
+        $or: [{ name }, { slug }],
+      });
+      if (exists) {
+        return res
+          .status(409)
+          .json({
+            success: false,
+            message: "Category name or slug already exists.",
+          });
       }
+      category.name = name;
+      category.slug = slug;
     }
-    category.ancestors = [...ancestorsSet];
 
-    const updatedCategory = await category.save();
-    res.json({ success: true, category: updatedCategory });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    category.parents = parents;
+    category.ancestors = await buildAncestors(parents);
+    if (image !== undefined) category.image = image;
+
+    const updated = await category.save();
+    res.json({ success: true, category: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Delete a category
+/** -------------------- Delete -------------------- */
 export const deleteCategory = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid ID format." });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
-    const category = await Category.findByIdAndDelete(req.params.id);
-    if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found." });
+    const deleted = await Category.findByIdAndDelete(id);
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     res.json({ success: true, message: "Category deleted successfully." });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Toggle category active status
+/** -------------------- Toggle Active/Inactive -------------------- */
 export const toggleCategory = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid ID format." });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format." });
     }
 
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(id);
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found." });
     }
 
     category.isActive = !category.isActive;
@@ -162,10 +201,12 @@ export const toggleCategory = async (req, res) => {
 
     res.json({
       success: true,
-      message: category.isActive ? "Category reactivated successfully." : "Category deactivated successfully.",
+      message: category.isActive
+        ? "Category reactivated successfully."
+        : "Category deactivated successfully.",
       category,
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -131,7 +131,7 @@ function OrderDetails() {
   }
 
   const totalSavings = order.orderItems.reduce((sum, item) => {
-    const originalPrice = item.product?.actualPrice || item.actualPrice || 0;
+    const originalPrice = item.basePrice || 0;
     const finalPrice = item.price || 0;
     return sum + (originalPrice - finalPrice) * item.quantity;
   }, 0);
@@ -218,75 +218,85 @@ function OrderDetails() {
                 Order Items ({order.orderItems.length})
               </Typography>
               <List>
-                {order.orderItems.map((item) => (
-                  <React.Fragment key={item._id}>
-                    <ListItem alignItems="flex-start" sx={{ py: 2 }}>
-                      <ListItemAvatar>
-                        <Avatar
-                          src={item.product?.images?.[0]?.imageUrl}
-                          variant="rounded"
-                          sx={{ width: 80, height: 80, mr: 2 }}
-                        />
-                      </ListItemAvatar>
-                      <Box component="div" sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" component="div">
-                          {item.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" component="div">
-                          {item.product?.brand}
-                        </Typography>
-                        <Box component="div" mt={0.5}>
-                          <Typography variant="body2" component="div">
-                            Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}
-                          </Typography>
-                          <Typography variant="body2" component="div">
-                            Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}
-                          </Typography>
-                          <Typography variant="body2" component="div">
-                            Total Price: ₹{(item.price * item.quantity).toFixed(2)}
-                          </Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center" mt={1}>
-                          <Chip
-                            label={item.orderStatus}
-                            color={statusColors[item.orderStatus] || 'default'}
-                            size="small"
+                {order.orderItems.map((item) => {
+                  const basePrice = item.basePrice || 0;
+                  const taxAmount = (basePrice * (item.taxPercentage || 0) / 100) * item.quantity;
+
+                  return (
+                    <React.Fragment key={item._id}>
+                      <ListItem alignItems="flex-start" sx={{ py: 2 }}>
+                        <ListItemAvatar>
+                          <Avatar
+                            src={item.product?.images?.[0]?.imageUrl}
+                            variant="rounded"
+                            sx={{ width: 80, height: 80, mr: 2 }}
                           />
-                          {item.isDelivered && item.deliveredAt && (
-                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                              on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                        </ListItemAvatar>
+                        <Box component="div" sx={{ flexGrow: 1 }}>
+                          <Typography variant="body1" component="div">
+                            {item.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" component="div">
+                            {item.product?.brand}
+                          </Typography>
+                          <Box component="div" mt={0.5}>
+                            <Typography variant="body2" component="div">
+                              Base Price: ₹{(basePrice * item.quantity).toFixed(2)}
                             </Typography>
-                          )}
-                          {item.isCancelled && item.cancelledAt && (
-                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                              on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
+                            {item.discountAmount > 0 && (
+                              <Typography variant="body2" component="div" color="error">
+                                Discount ({item.discountPercentage || 0}%): ₹{(item.discountAmount * item.quantity).toFixed(2)}
+                              </Typography>
+                            )}
+                            <Typography variant="body2" component="div">
+                              Taxes ({item.taxPercentage || 0}%): ₹{taxAmount.toFixed(2)}
                             </Typography>
+                            <Typography variant="body2" component="div">
+                              Total Price: ₹{(item.price * item.quantity).toFixed(2)}
+                            </Typography>
+                          </Box>
+                          <Box display="flex" alignItems="center" mt={1}>
+                            <Chip
+                              label={item.orderStatus}
+                              color={statusColors[item.orderStatus] || 'default'}
+                              size="small"
+                            />
+                            {item.isDelivered && item.deliveredAt && (
+                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                              </Typography>
+                            )}
+                            {item.isCancelled && item.cancelledAt && (
+                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Box sx={{ minWidth: 150, textAlign: 'right' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Qty: {item.quantity}
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </Typography>
+                          {!item.isCancelled && !item.isDelivered && (
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              sx={{ mt: 1 }}
+                              onClick={() => handleOpenCancelDialog(item)}
+                            >
+                              Cancel Item
+                            </Button>
                           )}
                         </Box>
-                      </Box>
-                      <Box sx={{ minWidth: 150, textAlign: 'right' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Qty: {item.quantity}
-                        </Typography>
-                        <Typography variant="body1" fontWeight="medium">
-                          ₹{(item.price * item.quantity).toFixed(2)}
-                        </Typography>
-                        {!item.isCancelled && !item.isDelivered && (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            sx={{ mt: 1 }}
-                            onClick={() => handleOpenCancelDialog(item)}
-                          >
-                            Cancel Item
-                          </Button>
-                        )}
-                      </Box>
-                    </ListItem>
-                    <Divider component="li" />
-                  </React.Fragment>
-                ))}
+                      </ListItem>
+                      <Divider component="li" />
+                    </React.Fragment>
+                  );
+                })}
               </List>
             </CardContent>
           </Card>
@@ -318,46 +328,56 @@ function OrderDetails() {
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2">Items from this seller:</Typography>
                         <List dense>
-                          {sellerOrder.items.map((item) => (
-                            <ListItem key={item._id}>
-                              <Box component="div" sx={{ flexGrow: 1 }}>
-                                <Typography variant="body1" component="div">
-                                  {item.name} (Qty: {item.quantity})
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  Base Price: ₹{(item.actualPrice * item.quantity).toFixed(2)}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  Taxes ({item.taxPercentage}%): ₹{(item.taxes * item.quantity).toFixed(2)}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  Total Price: ₹{(item.price * item.quantity).toFixed(2)}
-                                </Typography>
-                                <Box display="flex" alignItems="center" mt={0.5}>
-                                  <Chip
-                                    label={item.orderStatus}
-                                    color={statusColors[item.orderStatus] || 'default'}
-                                    size="small"
-                                  />
-                                  {item.isDelivered && item.deliveredAt && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                      on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                          {sellerOrder.items.map((item) => {
+                            const basePrice = item.basePrice || 0;
+                            const taxAmount = (basePrice * (item.taxPercentage || 0) / 100) * item.quantity;
+
+                            return (
+                              <ListItem key={item._id}>
+                                <Box component="div" sx={{ flexGrow: 1 }}>
+                                  <Typography variant="body1" component="div">
+                                    {item.name} (Qty: {item.quantity})
+                                  </Typography>
+                                  <Typography variant="body2" component="div">
+                                    Base Price: ₹{(basePrice * item.quantity).toFixed(2)}
+                                  </Typography>
+                                  {item.discountAmount > 0 && (
+                                    <Typography variant="body2" component="div" color="error">
+                                      Discount ({item.discountPercentage || 0}%): ₹{(item.discountAmount * item.quantity).toFixed(2)}
                                     </Typography>
                                   )}
-                                  {item.isCancelled && item.cancelledAt && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                      on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
-                                    </Typography>
-                                  )}
+                                  <Typography variant="body2" component="div">
+                                    Taxes ({item.taxPercentage || 0}%): ₹{taxAmount.toFixed(2)}
+                                  </Typography>
+                                  <Typography variant="body2" component="div">
+                                    Total Price: ₹{(item.price * item.quantity).toFixed(2)}
+                                  </Typography>
+                                  <Box display="flex" alignItems="center" mt={0.5}>
+                                    <Chip
+                                      label={item.orderStatus}
+                                      color={statusColors[item.orderStatus] || 'default'}
+                                      size="small"
+                                    />
+                                    {item.isDelivered && item.deliveredAt && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                        on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                                      </Typography>
+                                    )}
+                                    {item.isCancelled && item.cancelledAt && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                        on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
+                                      </Typography>
+                                    )}
+                                  </Box>
                                 </Box>
-                              </Box>
-                              <Box sx={{ minWidth: 150, textAlign: 'right' }}>
-                                <Typography variant="body1" fontWeight="medium">
-                                  ₹{(item.price * item.quantity).toFixed(2)}
-                                </Typography>
-                              </Box>
-                            </ListItem>
-                          ))}
+                                <Box sx={{ minWidth: 150, textAlign: 'right' }}>
+                                  <Typography variant="body1" fontWeight="medium">
+                                    ₹{(item.price * item.quantity).toFixed(2)}
+                                  </Typography>
+                                </Box>
+                              </ListItem>
+                            );
+                          })}
                         </List>
                       </Box>
                       <Box display="flex" justifyContent="space-between" mt={1}>
@@ -377,6 +397,12 @@ function OrderDetails() {
                   <Typography>Items Price</Typography>
                   <Typography>₹{order.itemsPrice.toFixed(2)}</Typography>
                 </Box>
+                {order.totalDiscount > 0 && (
+                  <Box display="flex" justifyContent="space-between" color="error.main">
+                    <Typography>Total Discount</Typography>
+                    <Typography>-₹{order.totalDiscount.toFixed(2)}</Typography>
+                  </Box>
+                )}
                 <Box display="flex" justifyContent="space-between">
                   <Typography>Shipping</Typography>
                   <Typography>₹{order.shippingPrice.toFixed(2)}</Typography>
@@ -425,8 +451,13 @@ function OrderDetails() {
           </Typography>
           <Typography component="div">Quantity: {selectedItem?.quantity}</Typography>
           <Typography component="div">Price: ₹{(selectedItem?.price * selectedItem?.quantity).toFixed(2)}</Typography>
-          <Typography component="div">Base Price: ₹{(selectedItem?.actualPrice * selectedItem?.quantity).toFixed(2)}</Typography>
-          <Typography component="div">Taxes ({selectedItem?.taxPercentage}%): ₹{(selectedItem?.taxes * selectedItem?.quantity).toFixed(2)}</Typography>
+          <Typography component="div">Base Price: ₹{((selectedItem?.basePrice || 0) * selectedItem?.quantity).toFixed(2)}</Typography>
+          {selectedItem?.discountAmount > 0 && (
+            <Typography component="div" color="error">
+              Discount ({selectedItem?.discountPercentage || 0}%): ₹{((selectedItem?.discountAmount || 0) * selectedItem?.quantity).toFixed(2)}
+            </Typography>
+          )}
+          <Typography component="div">Taxes ({selectedItem?.taxPercentage || 0}%): ₹{(((selectedItem?.basePrice || 0) * (selectedItem?.taxPercentage || 0) / 100) * selectedItem?.quantity).toFixed(2)}</Typography>
           <TextField
             autoFocus
             margin="dense"

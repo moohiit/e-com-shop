@@ -1,147 +1,141 @@
-import { useState, useEffect } from "react";
-import {
-  useAddCategoryMutation,
-  useUpdateCategoryMutation,
-  useFetchCategoriesQuery,
-} from "../features/category/categoryApiSlice";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { Loader2, X } from "lucide-react";
+import toast from "react-hot-toast";
+import { useUploadMultipleImagesMutation } from "../features/upload/uploadApi";
+import { useAddCategoryMutation } from "../features/category/categoryApiSlice";
 
-export default function AddCategoryModal({ onClose, existingCategory = null }) {
-  const [name, setName] = useState("");
-  const [parents, setParents] = useState([]);
-  const [parentSearch, setParentSearch] = useState("");
+function CategoryModal({ onClose }) {
+  const [createCategory, { isLoading: creating }] = useAddCategoryMutation();
+  const [uploadImages] = useUploadMultipleImagesMutation();
 
-  const { data: response } = useFetchCategoriesQuery();
-  const categories = response?.categories || [];
+  const [imageFile, setImageFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  const [addCategory, { isLoading: adding, error: addError }] =
-    useAddCategoryMutation();
-  const [updateCategory, { isLoading: updating, error: updateError }] =
-    useUpdateCategoryMutation();
-
-  useEffect(() => {
-    if (existingCategory) {
-      setName(existingCategory.name || "");
-      setParents(existingCategory.parents?.map((p) => p._id) || []);
-    }
-  }, [existingCategory]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const categoryData = { name };
-    if (parents.length > 0) categoryData.parents = parents;
-
-    try {
-      if (existingCategory) {
-        await updateCategory({
-          id: existingCategory._id,
-          data: categoryData,
-        }).unwrap();
-      } else {
-        await addCategory(categoryData).unwrap();
-      }
-      onClose();
-    } catch (err) {
-      console.error("Failed to save category:", err);
-    }
-  };
-
-  const handleParentChange = (e) => {
-    const selected = Array.from(e.target.selectedOptions, (opt) => opt.value);
-    setParents(selected);
-  };
-
-  // Filter categories based on parent search
-  const filteredCategories = categories.filter((cat) => {
-    const query = parentSearch.toLowerCase();
-    const parentNames = Array.isArray(cat.parents)
-      ? cat.parents
-          .map((p) => p?.name)
-          .filter(Boolean)
-          .join(", ")
-          .toLowerCase()
-      : "";
-    return (
-      cat._id !== existingCategory?._id &&
-      (cat.name.toLowerCase().includes(query) ||
-        cat.slug.toLowerCase().includes(query) ||
-        parentNames.includes(query))
-    );
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+    clearErrors,
+    reset,
+  } = useForm({
+    defaultValues: { name: "", slug: "", parent: "" },
   });
 
-  const isLoading = adding || updating;
-  const error = addError || updateError;
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    setImageFile(file);
+    if (!file) {
+      setError("image", { message: "Category image is required" });
+    } else {
+      clearErrors("image");
+    }
+  };
+
+  const uploadCategoryImage = async () => {
+    if (!imageFile) return null;
+    const formData = new FormData();
+    formData.append("images", imageFile);
+    setUploading(true);
+    try {
+      const res = await uploadImages({ formData, folder: "categories" }).unwrap();
+      if (res.images && res.images[0]) {
+        toast.success("Image uploaded successfully");
+        return res.images[0]; // { imageUrl, publicId }
+      }
+    } catch (err) {
+      toast.error(err.message || "Image upload failed");
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onSubmit = async (formData) => {
+    if (!imageFile) {
+      toast.error("Please upload a category image");
+      return;
+    }
+
+    const uploadedImage = await uploadCategoryImage();
+    if (!uploadedImage) return;
+
+    const payload = {
+      name: formData.name,
+      slug: formData.slug,
+      parents: formData.parent ? [formData.parent] : [],
+      image: uploadedImage,
+    };
+
+    try {
+      await createCategory(payload).unwrap();
+      toast.success("Category created successfully");
+      reset();
+      onClose();
+    } catch (err) {
+      toast.error(err?.data?.message || "Category creation failed");
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 dark:bg-opacity-60 flex items-center justify-center z-50">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl shadow-lg p-6 w-full max-w-md"
-      >
-        <h2 className="text-xl font-semibold mb-4">
-          {existingCategory ? "Edit Category" : "Add Category"}
-        </h2>
-
-        <input
-          type="text"
-          placeholder="Category Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full mb-3 rounded"
-        />
-
-        <label className="block text-sm font-medium mb-1">
-          Parent Categories (optional)
-        </label>
-        <input
-          type="text"
-          placeholder="Search parent categories..."
-          value={parentSearch}
-          onChange={(e) => setParentSearch(e.target.value)}
-          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full mb-2 rounded"
-        />
-        <select
-          multiple
-          value={parents}
-          onChange={handleParentChange}
-          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full mb-3 rounded h-32"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-600 hover:text-red-500 dark:text-gray-300"
         >
-          {filteredCategories.map((cat) => (
-            <option key={cat._id} value={cat._id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+          <X size={20} />
+        </button>
 
-        {error && (
-          <p className="text-red-500 mb-2">
-            {error.data?.message || "Something went wrong"}
-          </p>
-        )}
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Add Category</h2>
 
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-gray-100 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
-          >
-            Cancel
-          </button>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <input
+            {...register("name", { required: "Name is required" })}
+            placeholder="Category Name"
+            className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+          />
+          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+
+          <input
+            {...register("slug", { required: "Slug is required" })}
+            placeholder="Slug (unique URL key)"
+            className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+          />
+          {errors.slug && <p className="text-red-500 text-sm">{errors.slug.message}</p>}
+
+          {/* If you allow selecting a parent category */}
+          {/* <select {...register("parent")} className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white">
+            <option value="">No Parent (Top-level)</option>
+            {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          </select> */}
+
+          <div>
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+              Category Image
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border file:border-gray-300 dark:file:bg-gray-700 file:rounded-lg file:text-sm file:font-semibold"
+            />
+            {errors.image && <p className="text-red-500 text-sm">{errors.image.message}</p>}
+          </div>
+
           <button
             type="submit"
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-70"
+            disabled={creating || uploading}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {isLoading
-              ? existingCategory
-                ? "Updating..."
-                : "Adding..."
-              : existingCategory
-              ? "Update"
-              : "Add"}
+            {(creating || uploading) && <Loader2 className="animate-spin" size={18} />}
+            {uploading ? "Uploading..." : creating ? "Creating..." : "Create Category"}
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
+
+export default CategoryModal;

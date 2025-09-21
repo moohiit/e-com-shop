@@ -17,7 +17,7 @@ function EditProductModal({ onClose }) {
 
   const [uploading, setUploading] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
-  const [existingImages, setExistingImages] = useState(product.images || []);
+  const [existingImages, setExistingImages] = useState(product?.images || []);
   const dispatch = useDispatch();
 
   const {
@@ -28,31 +28,34 @@ function EditProductModal({ onClose }) {
     clearErrors,
     formState: { errors },
     reset,
+    setValue,
   } = useForm({
     defaultValues: {
-      name: product.name,
-      description: product.description,
-      brand: product.brand,
-      price: product.price,
-      taxPercentage: product.taxPercentage,
-      discountPrice: product.discountPrice,
-      stock: product.stock,
-      category: product.category,
+      name: product?.name || "",
+      description: product?.description || "",
+      brand: product?.brand || "",
+      basePrice: product?.basePrice || "",
+      taxPercentage: product?.taxPercentage || "",
+      discountPercentage: product?.discountPercentage || "",
+      stock: product?.stock || "",
+      categories: product?.categories?.map(cat => cat._id) || [],
     },
   });
 
   useEffect(() => {
-    reset({
-      name: product.name,
-      description: product.description,
-      brand: product.brand,
-      price: product.price,
-      taxPercentage: product.taxPercentage,
-      discountPrice: product.discountPrice,
-      stock: product.stock,
-      category: product.category,
-    });
-    setExistingImages(product.images || []);
+    if (product) {
+      reset({
+        name: product.name,
+        description: product.description,
+        brand: product.brand,
+        basePrice: product.basePrice,
+        taxPercentage: product.taxPercentage,
+        discountPercentage: product.discountPercentage,
+        stock: product.stock,
+        categories: product.categories?.map(cat => cat._id) || [],
+      });
+      setExistingImages(product.images || []);
+    }
   }, [product, reset]);
 
   const handleImageChange = (e) => {
@@ -77,7 +80,7 @@ function EditProductModal({ onClose }) {
       if (res.images) toast.success("Image(s) uploaded successfully");
       return res.images;
     } catch (err) {
-      toast.error(err.message || "Image Upload Failed");
+      toast.error(err?.data?.message || "Image Upload Failed");
       return [];
     } finally {
       setUploading(false);
@@ -109,13 +112,15 @@ function EditProductModal({ onClose }) {
       }
     } catch (err) {
       console.error("Update failed:", err);
-      toast.error(err.message || "Product update failed");
+      toast.error(err?.data?.message || "Product update failed");
     }
   };
 
-  const removeExistingImage = (url) => {
-    setExistingImages((prev) => prev.filter((img) => img !== url));
+  const removeExistingImage = (index) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
+
+  if (!product) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -139,39 +144,99 @@ function EditProductModal({ onClose }) {
 
           <input {...register("brand")} placeholder="Brand (optional)" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <input type="number" {...register("price", { required: "Price is required" })} placeholder="Price" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
-              {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
+              <input
+                type="number"
+                step="0.01"
+                {...register("basePrice", {
+                  required: "Base price is required",
+                  min: 0
+                })}
+                placeholder="Base Price"
+                className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+              />
+              {errors.basePrice && <p className="text-red-500 text-sm mt-1">{errors.basePrice.message}</p>}
             </div>
             <div>
-              <input type="number" {...register("taxPercentage", { required: "Tax Percentage is required" })} placeholder="Tax Percentage" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
+              <input
+                type="number"
+                step="0.01"
+                {...register("taxPercentage", {
+                  required: "Tax Percentage is required",
+                  min: 0,
+                  max: 100
+                })}
+                placeholder="Tax Percentage"
+                className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+              />
               {errors.taxPercentage && <p className="text-red-500 text-sm mt-1">{errors.taxPercentage.message}</p>}
             </div>
             <div>
-              <input type="number" {...register("discountPrice")} placeholder="Discount Price (optional)" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
+              <input
+                type="number"
+                step="0.01"
+                {...register("discountPercentage", {
+                  min: 0,
+                  max: 100
+                })}
+                placeholder="Discount %"
+                className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+              />
+              {errors.discountPercentage && <p className="text-red-500 text-sm mt-1">{errors.discountPercentage.message}</p>}
             </div>
           </div>
 
-          <input type="number" {...register("stock", { required: "Stock is required" })} placeholder="Stock" className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white" />
+          <input
+            type="number"
+            {...register("stock", {
+              required: "Stock is required",
+              min: 0
+            })}
+            placeholder="Stock"
+            className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+          />
           {errors.stock && <p className="text-red-500 text-sm mt-1">{errors.stock.message}</p>}
 
-          <Controller control={control} name="category" rules={{ required: "Category is required" }} render={({ field }) => (
-            <select {...field} className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white">
-              <option value="">Select Category</option>
-              {!loadingCategories && categoryData.map((cat) => (
-                <option key={cat._id} value={cat._id}>{cat.name}</option>
-              ))}
-            </select>
-          )} />
-          {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>}
+          {/* Categories Dropdown (Multiple) */}
+          <div>
+            <Controller
+              control={control}
+              name="categories"
+              rules={{ required: "At least one category is required" }}
+              render={({ field }) => (
+                <select
+                  multiple
+                  {...field}
+                  className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+                  value={field.value || []}
+                  onChange={(e) => {
+                    const options = e.target.options;
+                    const value = [];
+                    for (let i = 0; i < options.length; i++) {
+                      if (options[i].selected) {
+                        value.push(options[i].value);
+                      }
+                    }
+                    field.onChange(value);
+                  }}
+                >
+                  <option value="">Select Categories (Hold Ctrl for multiple)</option>
+                  {!loadingCategories && categoryData.map((cat) => (
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            {errors.categories && <p className="text-red-500 text-sm mt-1">{errors.categories.message}</p>}
+          </div>
 
           {/* Existing Images */}
           <div className="flex flex-wrap gap-3">
             {existingImages.map((img, i) => (
               <div key={i} className="relative w-20 h-20">
                 <img src={img.imageUrl} alt="product" className="w-full h-full object-cover rounded-md" />
-                <button type="button" onClick={() => removeExistingImage(img)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={12} /></button>
+                <button type="button" onClick={() => removeExistingImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={12} /></button>
               </div>
             ))}
           </div>

@@ -17,24 +17,24 @@ export default function CategoryList({ isAdmin = false }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // Number of categories per page
+  const itemsPerPage = 10;
 
   const categories = response?.categories || [];
 
-  // Filter categories based on search query
   const filteredCategories = categories.filter((cat) => {
-    const query = searchQuery.toLowerCase();
-    const parentNames = Array.isArray(cat.parents)
-      ? cat.parents.map((p) => p?.name).filter(Boolean).join(", ").toLowerCase()
-      : "";
+    const q = searchQuery.toLowerCase();
+    const parentNames = (cat.parents || [])
+      .map((p) => p?.name)
+      .filter(Boolean)
+      .join(", ")
+      .toLowerCase();
     return (
-      cat.name.toLowerCase().includes(query) ||
-      cat.slug.toLowerCase().includes(query) ||
-      parentNames.includes(query)
+      cat.name.toLowerCase().includes(q) ||
+      cat.slug.toLowerCase().includes(q) ||
+      parentNames.includes(q)
     );
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
   const paginatedCategories = filteredCategories.slice(
     (currentPage - 1) * itemsPerPage,
@@ -42,103 +42,87 @@ export default function CategoryList({ isAdmin = false }) {
   );
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
+    if (window.confirm("Delete this category?")) {
       try {
         await deleteCategory(id).unwrap();
-        toast.success("Category deleted successfully");
+        toast.success("Category deleted");
       } catch (err) {
-        console.error("Failed to delete category:", err);
-        toast.error("Failed to delete category");
+        console.error(err);
+        toast.error("Delete failed");
       }
     }
   };
 
   const handleToggle = async (id) => {
     try {
-      const response = await toggleCategory(id).unwrap();
-      if (!response.success) {
-        throw new Error(response.message || "Failed to toggle category");
-      }
-      toast.success(response.message || "Category toggled successfully");
+      const res = await toggleCategory(id).unwrap();
+      toast.success(res.message || "Status updated");
     } catch (err) {
-      console.error("Failed to toggle category:", err);
-      toast.error("Failed to toggle category");
+      console.error(err);
+      toast.error("Toggle failed");
     }
   };
 
-  const handleEdit = (category) => {
-    setEditingCategory(category);
+  const handleEdit = (cat) => {
+    setEditingCategory(cat);
     setShowEditModal(true);
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  if (isLoading) return <LoadingSpinner fullScreen={false} />;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className="text-red-500">Error loading categories</p>;
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-4">
-      {/* Search Input */}
+      {/* Search */}
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search by name, slug, or parent..."
+          placeholder="Search name, slug or parent..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
-            setCurrentPage(1); // Reset to first page on search
+            setCurrentPage(1);
           }}
           className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full rounded"
         />
       </div>
 
-      {/* Category Table */}
+      {/* Table */}
       <table className="min-w-full table-auto border border-gray-200 dark:border-gray-700">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-700 text-left">
-            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">
-              Name
-            </th>
-            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">
-              Slug
-            </th>
-            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">
-              Parent
-            </th>
-            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">
-              Status
-            </th>
-            <th className="p-2 border-b dark:border-gray-600 text-gray-700 dark:text-gray-300">
-              Actions
-            </th>
+            <th className="p-2 border-b dark:border-gray-600">Image</th>
+            <th className="p-2 border-b dark:border-gray-600">Name</th>
+            <th className="p-2 border-b dark:border-gray-600">Slug</th>
+            <th className="p-2 border-b dark:border-gray-600">Parent</th>
+            <th className="p-2 border-b dark:border-gray-600">Status</th>
+            <th className="p-2 border-b dark:border-gray-600">Actions</th>
           </tr>
         </thead>
         <tbody>
           {paginatedCategories.map((cat) => (
-            <tr
-              key={cat._id}
-              className="hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                {cat.name}
+            <tr key={cat._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td className="p-2 border-b dark:border-gray-700">
+                {cat.image?.imageUrl ? (
+                  <img
+                    src={cat.image.imageUrl}
+                    alt={cat.name}
+                    className="w-16 h-16 object-cover rounded-md mx-auto"
+                  />
+                ) : (
+                  <span className="text-gray-400 italic">No Image</span>
+                )}
               </td>
-              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                {cat.slug}
-              </td>
-              <td className="p-2 border-b dark:border-gray-700 text-gray-800 dark:text-gray-200">
-                {Array.isArray(cat.parents) && cat.parents.length > 0
-                  ? cat.parents
-                    .map((p) => p?.name)
-                    .filter(Boolean)
-                    .join(", ")
+              <td className="p-2 border-b dark:border-gray-700">{cat.name}</td>
+              <td className="p-2 border-b dark:border-gray-700">{cat.slug}</td>
+              <td className="p-2 border-b dark:border-gray-700">
+                {cat.parents?.length
+                  ? cat.parents.map((p) => p?.name).filter(Boolean).join(", ")
                   : "—"}
               </td>
               <td className="p-2 border-b dark:border-gray-700">
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-semibold
-                  ${cat.isActive
+                  className={`px-2 py-1 rounded-full text-xs font-semibold ${cat.isActive
                       ? "bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900"
                       : "bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900"
                     }`}
@@ -146,26 +130,26 @@ export default function CategoryList({ isAdmin = false }) {
                   {cat.isActive ? "Active" : "Inactive"}
                 </span>
               </td>
-              <td className="p-2 border-b dark:border-gray-700 flex flex-wrap gap-2">
+              <td className="p-2 border-b dark:border-gray-700 flex gap-2 flex-wrap">
                 <button
                   onClick={() => handleEdit(cat)}
-                  className="bg-blue-100 text-blue-800 dark:bg-blue-200 dark:text-blue-900 px-2 py-1 rounded text-xs font-semibold hover:bg-blue-200 dark:hover:bg-blue-300"
+                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs hover:bg-blue-200 dark:bg-blue-200 dark:text-blue-900"
                 >
                   Edit
                 </button>
-                {isAdmin && <button
-                  onClick={() => handleDelete(cat._id)}
-                  className="bg-red-100 text-red-700 dark:bg-red-200 dark:text-red-900 px-2 py-1 rounded text-xs font-semibold hover:bg-red-200 dark:hover:bg-red-300"
-                >
-                  Delete
-                </button>
-                }
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDelete(cat._id)}
+                    className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
+                  >
+                    Delete
+                  </button>
+                )}
                 <button
                   onClick={() => handleToggle(cat._id)}
-                  className={`px-2 py-1 rounded text-xs font-semibold
-                    ${cat.isActive
-                      ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900 dark:hover:bg-red-300"
-                      : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900 dark:hover:bg-green-300"
+                  className={`px-2 py-1 rounded text-xs font-semibold ${cat.isActive
+                      ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
+                      : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900"
                     }`}
                 >
                   {cat.isActive ? "Deactivate" : "Activate"}
@@ -176,23 +160,23 @@ export default function CategoryList({ isAdmin = false }) {
         </tbody>
       </table>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex justify-between items-center">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => p - 1)}
+            className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded disabled:opacity-50"
           >
-            Previous
+            Prev
           </button>
           <span className="text-gray-800 dark:text-gray-200">
             Page {currentPage} of {totalPages}
           </span>
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => p + 1)}
+            className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded disabled:opacity-50"
           >
             Next
           </button>

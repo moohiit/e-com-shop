@@ -1,83 +1,111 @@
 import slugify from "slugify";
-import Product from "../models/Product.js";
 import mongoose from "mongoose";
+import Product from "../models/Product.js";
+import Category from "../models/Category.js";
 import cloudinary from "../config/cloudinary.js";
 
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const buildPriceFilter = (minPrice, maxPrice) => {
+  const priceFilter = {};
+  if (minPrice !== undefined && minPrice !== "") {
+    const min = Number(minPrice);
+    if (Number.isNaN(min)) throw new Error("minPrice must be a valid number");
+    priceFilter.$gte = min;
+  }
+  if (maxPrice !== undefined && maxPrice !== "") {
+    const max = Number(maxPrice);
+    if (Number.isNaN(max)) throw new Error("maxPrice must be a valid number");
+    priceFilter.$lte = max;
+  }
+  return Object.keys(priceFilter).length ? priceFilter : undefined;
+};
+
+const buildSortOption = (sort) => {
+  switch (sort) {
+    case "price_asc":
+      return { basePrice: 1 };
+    case "price_desc":
+      return { basePrice: -1 };
+    case "popular":
+      return { ratingsAverage: -1 };
+    default:
+      return { createdAt: -1 };
+  }
+};
+
+const populateFields = [
+  { path: "categories", select: "name slug" },
+  { path: "seller", select: "name email" },
+];
+
+/* ---------- Create Product ---------- */
 export const createProduct = async (req, res) => {
   try {
     const {
       name,
       description,
       brand,
-      taxPercentage,
-      price,
-      discountPrice,
+      basePrice,
+      discountPercentage = 0,
+      taxPercentage = 0,
       stock,
-      images,
-      category,
+      images = [],
+      categories,
     } = req.body;
 
-    const rawName = name.replace(/['"]/g, "");
-    const slug = slugify(rawName, { lower: true, strict: true });
-
-    if (
-      !name ||
-      !slug ||
-      !description ||
-      !taxPercentage ||
-      !price ||
-      !stock ||
-      !images ||
-      !category
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All required fields must be filled.",
-      });
+    if (!name || !description || !basePrice || !stock || !categories) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields." });
     }
 
-    const existing = await Product.findOne({ slug });
-    if (existing) {
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "At least one category is required.",
+        });
+    }
+
+    for (const catId of categories) {
+      if (!isValidObjectId(catId)) {
+        return res
+          .status(400)
+          .json({ success: false, message: `Invalid category ID: ${catId}` });
+      }
+    }
+
+    const slug = slugify(name, { lower: true, strict: true });
+    if (await Product.findOne({ slug })) {
       return res
         .status(409)
         .json({ success: false, message: "Product slug already exists." });
     }
 
-    // calculate actualPrice (excluding tax) from a tax-inclusive price
-    const actualPrice = parseFloat(price / (1 + taxPercentage / 100)).toFixed(2);
-    const taxes = parseFloat(price - actualPrice).toFixed(2);
-
-    const product = new Product({
+    const product = await Product.create({
       name,
       slug,
       description,
       brand: brand || "",
+      basePrice,
+      discountPercentage,
       taxPercentage,
-      actualPrice,
-      taxes,
-      price,
-      discountPrice: discountPrice || price,
       stock,
-      images: images || [],
-      category,
+      images,
+      categories,
       seller: req.user.id,
     });
 
-    await product.save();
-    res.status(201).json({
-      success: true,
-      product,
-      message: "Product Created Successfully.",
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
+    res.status(201).json({ success: true, product });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-export const getAllProducts = async (req, res) => {
+/* ---------- Shared Query Logic ---------- */
+const listProducts = async (req, res, baseQuery = {}) => {
   try {
     const {
       search,
@@ -90,160 +118,37 @@ export const getAllProducts = async (req, res) => {
       sort = "latest",
     } = req.query;
 
-    // console.log("Raw Query Parameters:", req.query);
+    const query = { ...baseQuery };
 
-    const query = { isActive: true };
+    // Fix: Check for truthy AND non-empty string values
+    if (search && search.trim() !== "") query.name = { $regex: search, $options: "i" };
+    if (brand && brand.trim() !== "") query.brand = { $regex: brand, $options: "i" };
 
-    // Search by name
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-
-    // Filter by category
-    if (category) {
-      query.category = category;
-    }
-
-    // Filter by brand
-    if (brand) {
-      query.brand = { $regex: brand, $options: "i" };
-    }
-
-    // Price range filter
-    if (minPrice || maxPrice) {
-      query.price = {};
-
-      if (minPrice) {
-        const min = Number(minPrice);
-        if (isNaN(min)) {
-          return res.status(400).json({
-            success: false,
-            message: "minPrice must be a valid number",
-          });
-        }
-        query.price.$gte = min;
-      }
-
-      if (maxPrice) {
-        const max = Number(maxPrice);
-        if (isNaN(max)) {
-          return res.status(400).json({
-            success: false,
-            message: "maxPrice must be a valid number",
-          });
-        }
-        query.price.$lte = max;
-      }
-    }
-
-    // console.log("Final Query Object:", query);
-
-    // Sorting
-    let sortOption = { createdAt: -1 }; // default: latest first
-    if (sort === "price_asc") sortOption = { price: 1 };
-    else if (sort === "price_desc") sortOption = { price: -1 };
-    else if (sort === "popular") sortOption = { ratingsAverage: -1 };
-
-    // Pagination
-    const total = await Product.countDocuments(query);
-    const products = await Product.find(query)
-      .populate([{ path: "category", select: "name" },
-        {path: "seller", select: "name email"}
-      ])
-      .sort(sortOption)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    res.json({
-      success: true,
-      products,
-      pagination: {
-        total,
-        page: Number(page),
-        pages: Math.ceil(total / limit),
-        limit: Number(limit),
-      },
-    });
-  } catch (error) {
-    console.error("Error in getAllProducts:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
-  }
-};
-
-export const getAllProductsAdmin = async (req, res) => {
-  try {
-    const {
-      search,
-      category,
-      brand,
-      minPrice,
-      maxPrice,
-      page = 1,
-      limit = 10,
-      sort = "latest",
-    } = req.query;
-    // console.log("Raw Query Parameters:", req.query);
-    const query = {};
-    // Search by name
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-    // Filter by category
-    if (category) {
-      if (!mongoose.Types.ObjectId.isValid(category)) {
+    if (category && category.trim() !== "") {
+      if (!isValidObjectId(category)) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid category ID." });
       }
-      query.category = category;
+      // Include subcategories as well
+      const categoryIds = [category];
+      const subCats = await Category.find({ ancestors: category }).select(
+        "_id"
+      );
+      subCats.forEach((c) => categoryIds.push(c._id));
+      query.categories = { $in: categoryIds };
     }
-    // Filter by brand
-    if (brand) {
-      query.brand = { $regex: brand, $options: "i" };
-    }
-    // Price range filter
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) {
-        const min = Number(minPrice);
-        if (isNaN(min)) {
-          return res.status(400).json({
-            success: false,
-            message: "minPrice must be a valid number",
-          });
-        }
-        query.price.$gte = min;
-      }
-      if (maxPrice) {
-        const max = Number(maxPrice);
-        if (isNaN(max)) {
-          return res.status(400).json({
-            success: false,
-            message: "maxPrice must be a valid number",
-          });
-        }
-        query.price.$lte = max;
-      }
-    }
-    // console.log("Final Query Object:", query);
-    // Sorting
-    let sortOption = { createdAt: -1 }; // default: latest first
-    if (sort === "price_asc") sortOption = { price: 1 };
-    else if (sort === "price_desc") sortOption = { price: -1 };
-    else if (sort === "popular") sortOption = { ratingsAverage: -1 };
-    // Pagination
+
+    const priceFilter = buildPriceFilter(minPrice, maxPrice);
+    if (priceFilter) query.basePrice = priceFilter;
+    console.log("Query:", query);
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate([
-        { path: "category", select: "name" },
-        { path: "seller", select: "name email" },
-      ])
-      .sort(sortOption)
+      .populate(populateFields)
+      .sort(buildSortOption(sort))
       .skip((page - 1) * limit)
       .limit(Number(limit));
+
     res.json({
       success: true,
       products,
@@ -254,255 +159,138 @@ export const getAllProductsAdmin = async (req, res) => {
         limit: Number(limit),
       },
     });
-  } catch (error) {
-    console.error("Error in getAllProductsAdmin:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-export const getAllProductsBySeller = async (req, res) => {
-  try {
-    const sellerId = req.user._id;
-    const query = { seller: sellerId };
-    const {
-      search,
-      category,
-      brand,
-      minPrice,
-      maxPrice,
-      page = 1,
-      limit = 10,
-      sort = "latest",
-    } = req.query;
-    // console.log("Raw Query Parameters:", req.query);
-    // Search by name
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-    // Filter by category
-    if (category) {
-      if (!mongoose.Types.ObjectId.isValid(category)) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid category ID." });
-      }
-      query.category = category;
-    }
-    // Filter by brand
-    if (brand) {
-      query.brand = { $regex: brand, $options: "i" };
-    }
-    // Price range filter
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) {
-        const min = Number(minPrice);
-        if (isNaN(min)) {
-          return res.status(400).json({
-            success: false,
-            message: "minPrice must be a valid number",
-          });
-        }
-        query.price.$gte = min;
-      }
-      if (maxPrice) {
-        const max = Number(maxPrice);
-        if (isNaN(max)) {
-          return res.status(400).json({
-            success: false,
-            message: "maxPrice must be a valid number",
-          });
-        }
-        query.price.$lte = max;
-      }
-    }
-    // console.log("Final Query Object:", query);
-    // Sorting
-    let sortOption = { createdAt: -1 }; // default: latest first
-    if (sort === "price_asc") sortOption = { price: 1 };
-    else if (sort === "price_desc") sortOption = { price: -1 };
-    else if (sort === "popular") sortOption = { ratingsAverage: -1 };
+/* ---------- Exported listings ---------- */
+export const getAllProducts = (req, res) =>
+  listProducts(req, res, { isActive: true });
+export const getAllProductsAdmin = (req, res) => listProducts(req, res);
+export const getAllProductsBySeller = (req, res) =>
+  listProducts(req, res, { seller: req.user._id });
 
-    const total = await Product.countDocuments(query);
-    const products = await Product.find(query)
-      .populate([
-        { path: "category", select: "name" },
-        { path: "seller", select: "name email" },
-      ])
-      .sort(sortOption)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    res.json({
-      success: true,
-      products,
-      pagination: {
-        total,
-        page: Number(page),
-        pages: Math.ceil(total / limit),
-        limit: Number(limit),
-      },
-    });
-  } catch (error) {
-    console.error("Error in getAllProductsBySeller:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
-  }
-};
-
-// get produnct by id
+/* ---------- Single Product ---------- */
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate({
-        path: 'seller',
-        select: 'name email role avatar'
-      })
-      .populate({
-        path: 'category',
-        select: 'name'
-      });
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+    if (!isValidObjectId(req.params.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product ID." });
     }
-
-    res.json({
-      success: true,
-      product
-    });
-  } catch (error) {
-    console.error('Error in getProductById:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error.'
-    });
+    const product = await Product.findById(req.params.id).populate(
+      populateFields.concat({
+        path: "seller",
+        select: "name email role avatar",
+      })
+    );
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+    }
+    res.json({ success: true, product });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
+/* ---------- Update Product ---------- */
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-
-    if (!product || !product.isActive) {
+    if (!product) {
       return res
         .status(404)
-        .json({ success: false, message: "Product not found" });
+        .json({ success: false, message: "Product not found." });
     }
 
-    if (
-      product.seller.toString() !== req.user._id.toString() && // Not the author
-      req.user.role !== "admin" // Also not an admin
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to update this product",
-      });
-    }
-
-    const updatableFields = [
-      "name",
-      "description",
-      "price",
-      "taxPercentage",
-      "discountPrice",
-      "brand",
-      "category",
-      "stock",
-      "images",
-    ];
-
-    updatableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        product[field] = req.body[field];
-      }
-    });
-    // calculate actualPrice (excluding tax) from a tax-inclusive price
-    const actualPrice = parseFloat(req.body.price / (1 + req.body.taxPercentage / 100)).toFixed(2);
-    const taxes = parseFloat(req.body.price - actualPrice).toFixed(2);
-    product.actualPrice = actualPrice || product.actualPrice;
-    product.taxes = taxes || product.taxes;
-    if (req.body.name) {
-      const rawName = req.body.name.replace(/['"]/g, "");
-      product.slug = slugify(rawName, { lower: true, strict: true });
-    }
-
-    if (req.body.price && !req.body.discountPrice) {
-      product.discountPrice = req.body.price;
-    }
-
-    const updatedProduct = await product.save();
-    res.json({
-      success: true,
-      data: updatedProduct,
-      message: "Product updated successfully.",
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found or already deleted.",
-      });
-    }
     if (
       product.seller.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to delete this product.",
-      });
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized." });
     }
 
-    // Delete each image from Cloudinary
+    const fields = [
+      "name",
+      "description",
+      "brand",
+      "basePrice",
+      "discountPercentage",
+      "taxPercentage",
+      "stock",
+      "images",
+      "categories",
+    ];
+    fields.forEach((f) => {
+      if (req.body[f] !== undefined) product[f] = req.body[f];
+    });
+
+    if (req.body.name) {
+      product.slug = slugify(req.body.name, { lower: true, strict: true });
+    }
+
+    const updated = await product.save();
+    res.json({ success: true, product: updated, message: "Product updated." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------- Delete Product ---------- */
+export const deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+
+    if (
+      product.seller.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized." });
+    }
+
     for (const img of product.images) {
       if (img.publicId) {
         await cloudinary.uploader.destroy(img.publicId, {
           invalidate: true,
           resource_type: "image",
         });
-        // console.log("Image deleted:", img.publicId)
       }
     }
-    // permanently delete
-    await Product.findByIdAndDelete(req.params.id);
-    return res.json({ success: true, message: "Product deleted permanently." });
-  } catch (error) {
-    console.error("Error in deleteProduct:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
+
+    await Product.findByIdAndDelete(product._id);
+    res.json({ success: true, message: "Product deleted permanently." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
+/* ---------- Toggle Status ---------- */
 export const toggleProductStatus = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
 
     if (
       product.seller.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to change product status.",
-      });
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized." });
     }
 
     product.isActive = !product.isActive;
@@ -512,56 +300,48 @@ export const toggleProductStatus = async (req, res) => {
       message: `Product ${
         product.isActive ? "restored" : "deactivated"
       } successfully.`,
-      data: product,
+      product,
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-export const getProductCount = async (req, res) => {
+/* ---------- Count ---------- */
+export const getProductCount = async (_req, res) => {
   try {
     const count = await Product.countDocuments({ isActive: true });
     res.json({ success: true, count });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
+/* ---------- Products by Category (with subcategories) ---------- */
 export const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    if (!isValidObjectId(categoryId)) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid category ID." });
     }
 
+    const categoryIds = [categoryId];
+    const subCats = await Category.find({ ancestors: categoryId }).select(
+      "_id"
+    );
+    subCats.forEach((c) => categoryIds.push(c._id));
+
     const products = await Product.find({
-      category: categoryId,
+      categories: { $in: categoryIds },
       isActive: true,
     })
-      .populate([
-        { path: "category", select: "name" },
-        { path: "seller", select: "name email" },
-      ])
+      .populate(populateFields)
       .sort({ createdAt: -1 });
 
-    if (products.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No products found in this category.",
-      });
-    }
-
-    res.json({ success: true, data: products });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error.",
-    });
+    res.json({ success: true, products });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
