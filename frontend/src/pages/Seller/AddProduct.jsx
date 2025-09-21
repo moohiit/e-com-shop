@@ -10,7 +10,6 @@ function AddProduct() {
   const { data: response, isLoading: loadingCategories } =
     useFetchCategoriesQuery();
   const categoryData = response?.categories || [];
-  // console.log('Categories:', response);
   const [uploadImages] = useUploadMultipleImagesMutation();
   const [createProduct, { isLoading: creating, isSuccess, error }] =
     useCreateProductMutation();
@@ -31,11 +30,11 @@ function AddProduct() {
       name: "",
       description: "",
       brand: "",
-      price: "",
+      basePrice: "",
       taxPercentage: "",
-      discountPrice: "",
+      discountPercentage: "",
       stock: "",
-      category: "",
+      categories: [],
     },
   });
 
@@ -63,7 +62,7 @@ function AddProduct() {
       }
       return res.images;
     } catch (err) {
-      toast.error(err.message || err.response.message || "Image Upload Failed");
+      toast.error(err?.data?.message || "Image Upload Failed");
       return [];
     } finally {
       setUploading(false);
@@ -91,7 +90,7 @@ function AddProduct() {
       }
     } catch (err) {
       console.error("Product creation failed:", err);
-      toast.error(err.message || err.response.message || "Product creation failed..")
+      toast.error(err?.data?.message || "Product creation failed..");
     }
   };
 
@@ -140,25 +139,31 @@ function AddProduct() {
           />
         </div>
 
-        {/* Price and Discount Price */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Price, Tax, and Discount */}
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <input
               type="number"
-              {...register("price", { required: "Price is required" })}
-              placeholder="Price"
+              step="0.01"
+              {...register("basePrice", { required: "Base price is required", min: 0 })}
+              placeholder="Base Price"
               className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
             />
-            {errors.price && (
+            {errors.basePrice && (
               <p className="text-red-500 text-sm mt-1">
-                {errors.price.message}
+                {errors.basePrice.message}
               </p>
             )}
           </div>
           <div>
             <input
               type="number"
-              {...register("taxPercentage", { required: "Tax Percentage is required" })}
+              step="0.01"
+              {...register("taxPercentage", {
+                required: "Tax Percentage is required",
+                min: 0,
+                max: 100
+              })}
               placeholder="Tax Percentage"
               className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
             />
@@ -171,10 +176,19 @@ function AddProduct() {
           <div>
             <input
               type="number"
-              {...register("discountPrice")}
-              placeholder="Discount Price (optional)"
+              step="0.01"
+              {...register("discountPercentage", {
+                min: 0,
+                max: 100
+              })}
+              placeholder="Discount % (optional)"
               className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
             />
+            {errors.discountPercentage && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.discountPercentage.message}
+              </p>
+            )}
           </div>
         </div>
 
@@ -182,7 +196,10 @@ function AddProduct() {
         <div>
           <input
             type="number"
-            {...register("stock", { required: "Stock is required" })}
+            {...register("stock", {
+              required: "Stock is required",
+              min: 0
+            })}
             placeholder="Stock"
             className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
           />
@@ -191,18 +208,30 @@ function AddProduct() {
           )}
         </div>
 
-        {/* Category Dropdown */}
+        {/* Categories Dropdown (Multiple) */}
         <div>
           <Controller
             control={control}
-            name="category"
-            rules={{ required: "Category is required" }}
+            name="categories"
+            rules={{ required: "At least one category is required" }}
             render={({ field }) => (
               <select
+                multiple
                 {...field}
                 className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+                value={field.value || []}
+                onChange={(e) => {
+                  const options = e.target.options;
+                  const value = [];
+                  for (let i = 0; i < options.length; i++) {
+                    if (options[i].selected) {
+                      value.push(options[i].value);
+                    }
+                  }
+                  field.onChange(value);
+                }}
               >
-                <option value="">Select Category</option>
+                <option value="">Select Categories (Hold Ctrl for multiple)</option>
                 {!loadingCategories &&
                   categoryData.map((cat) => (
                     <option key={cat._id} value={cat._id}>
@@ -212,9 +241,9 @@ function AddProduct() {
               </select>
             )}
           />
-          {errors.category && (
+          {errors.categories && (
             <p className="text-red-500 text-sm mt-1">
-              {errors.category.message}
+              {errors.categories.message}
             </p>
           )}
         </div>
@@ -248,8 +277,8 @@ function AddProduct() {
           {uploading
             ? "Uploading..."
             : creating
-            ? "Creating..."
-            : "Add Product"}
+              ? "Creating..."
+              : "Add Product"}
         </button>
       </form>
 

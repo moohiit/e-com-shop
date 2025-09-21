@@ -41,7 +41,7 @@ const cartSlice = createSlice({
         state.items.push({ ...action.payload, quantity: 1 });
       }
       state.totalQuantity += 1;
-      state.totalAmount += (action.payload.discountPrice || action.payload.price);
+      state.totalAmount += (action.payload.finalPrice);
       saveCartToStorage(state);
     },
     removeItem: (state, action) => {
@@ -57,7 +57,7 @@ const cartSlice = createSlice({
           existingItem.quantity -= 1;
         }
         state.totalQuantity -= 1;
-        state.totalAmount -= (existingItem.discountPrice || existingItem.price);
+        state.totalAmount -= (existingItem.finalPrice);
         saveCartToStorage(state);
       }
     },
@@ -68,7 +68,7 @@ const cartSlice = createSlice({
       if (itemToRemove) {
         state.items = state.items.filter((item) => item._id !== action.payload);
         state.totalQuantity -= itemToRemove.quantity;
-        state.totalAmount -= (itemToRemove.discountPrice || itemToRemove.price) * itemToRemove.quantity;
+        state.totalAmount -= (itemToRemove.finalPrice) * itemToRemove.quantity;
         saveCartToStorage(state);
       }
     },

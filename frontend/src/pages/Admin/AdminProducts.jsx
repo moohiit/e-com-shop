@@ -28,20 +28,34 @@ function AdminProducts() {
 
   const { data, isLoading, isError, refetch } =
     useFetchAllProductsAdminQuery(filters);
-    console.log("Resposne: ", data)
   const [deleteProduct] = useDeleteProductMutation();
   const [toggleProduct] = useToggleProductMutation();
 
   const handleInputChange = (e) => {
-    setFilters((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-      page: 1,
-    }));
-    refetch()
+    const { name, value } = e.target;
+
+    // Remove empty values from filters
+    setFilters((prev) => {
+      const newFilters = {
+        ...prev,
+        [name]: value,
+        page: 1,
+      };
+
+      // Remove empty string values
+      Object.keys(newFilters).forEach(key => {
+        if (newFilters[key] === "") {
+          delete newFilters[key];
+        }
+      });
+
+      return newFilters;
+    });
+
+    refetch();
   };
 
-  const handleEditProduct = (product)=>{
+  const handleEditProduct = (product) => {
     dispatch(setSelectedProduct(product));
     setShowEditModal(true);
   };
@@ -56,12 +70,12 @@ function AdminProducts() {
         refetch();
       }
     } catch (err) {
-      toast.error(err?.message || err.response.message || "Delete failed");
+      toast.error(err?.data?.message || "Delete failed");
     }
   };
 
   const handleProductStatus = async (id) => {
-    if (!window.confirm("Are you sure you want to restore this product?"))
+    if (!window.confirm("Are you sure you want to change product status?"))
       return;
     try {
       const response = await toggleProduct(id).unwrap();
@@ -70,7 +84,7 @@ function AdminProducts() {
         refetch();
       }
     } catch (err) {
-      toast.error(err?.message || err.response.message || "Delete failed");
+      toast.error(err?.data?.message || "Status change failed");
     }
   };
 
@@ -78,10 +92,10 @@ function AdminProducts() {
     <div className="p-4 bg-white dark:bg-gray-900 rounded-xl shadow-md">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          Manage Products
+          Manage Products (Admin)
         </h2>
         <Link
-          to="/seller/add-product"
+          to="/admin/add-product"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Add Product
@@ -148,19 +162,25 @@ function AdminProducts() {
                 Name
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
-                Price
+                Base Price
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Final Price
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
                 Brand
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
-                Category
+                Categories
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
                 Stock
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
                 Status
+              </th>
+              <th className="text-left p-2 text-gray-700 dark:text-white">
+                Seller
               </th>
               <th className="text-left p-2 text-gray-700 dark:text-white">
                 Actions
@@ -181,13 +201,16 @@ function AdminProducts() {
                   {product.name}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
-                  ₹{product.price}
+                  ₹{product.basePrice}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
+                  ₹{product.finalPrice}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
                   {product.brand}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
-                  {product?.category?.name || "Unknown"}
+                  {product.categories?.map(cat => cat.name).join(", ") || "Unknown"}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
                   {product.stock}
@@ -196,9 +219,12 @@ function AdminProducts() {
                   {product.isActive ? "Active" : "Inactive"}
                 </td>
                 <td className="p-2 text-gray-800 dark:text-gray-200">
+                  {product.seller?.name || "Unknown"}
+                </td>
+                <td className="p-2 text-gray-800 dark:text-gray-200">
                   <div className="flex items-center gap-2 h-full">
                     <button
-                      onClick={()=> handleEditProduct(product)}
+                      onClick={() => handleEditProduct(product)}
                       className="text-blue-500 hover:text-blue-800"
                     >
                       <Pencil size={16} />
@@ -246,7 +272,9 @@ function AdminProducts() {
           Next
         </button>
       </div>
-      {showEditModal && <EditProductModal onClose={() => setShowEditModal(false)} />}
+      {showEditModal && (
+        <EditProductModal onClose={() => setShowEditModal(false)} />
+      )}
     </div>
   );
 }

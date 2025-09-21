@@ -1,12 +1,39 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  slug: { type: String, required: true, unique: true },
-  parents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }], 
-  ancestors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
+const categorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    // Direct parent categories (can have multiple parents if needed)
+    parents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
 
-const Category = mongoose.model('Category', categorySchema);
+    // All ancestors up the tree (for quick lookup or breadcrumb)
+    ancestors: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+
+    // Store image (Cloudinary/GCS/S3 URL)
+    image: {
+      imageUrl: { type: String }, // Cloudinary URL
+      publicId: { type: String }, // Cloudinary public ID
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
+
+const Category = mongoose.model("Category", categorySchema);
 export default Category;

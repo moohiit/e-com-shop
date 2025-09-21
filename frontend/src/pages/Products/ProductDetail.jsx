@@ -17,11 +17,11 @@ function ProductDetail() {
   const dispatch = useDispatch();
   const [quantity, setQuantity] = useState(1);
   const wishlist = useSelector(selectWishlist);
-  
-  const { 
-    data: productData, 
-    isLoading, 
-    isError 
+
+  const {
+    data: productData,
+    isLoading,
+    isError
   } = useGetProductByIdQuery(id);
 
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -40,9 +40,8 @@ function ProductDetail() {
 
     dispatch(addItem({
       ...productData.product,
-      price: productData.product.discountPrice > 0 
-        ? productData.product.discountPrice 
-        : productData.product.price
+      quantity,
+      price: productData.product.finalPrice || productData.product.basePrice
     }));
 
     toast.success('Added to cart successfully');
@@ -93,9 +92,15 @@ function ProductDetail() {
 
   const product = productData.product;
   const seller = product.seller;
-  const discountPercentage = product.discountPrice > 0 
-    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
+
+  // Calculate discount percentage
+  const discountPercentage = product.discountPercentage > 0
+    ? Math.round(product.discountPercentage)
     : 0;
+
+  // Calculate final price if not provided by backend
+  const finalPrice = product.finalPrice ||
+    (product.basePrice * (1 - product.discountPercentage / 100) * (1 + product.taxPercentage / 100));
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -113,12 +118,12 @@ function ProductDetail() {
             className="absolute top-4 right-4 z-10 p-2 bg-white dark:bg-gray-700 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
             aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
           >
-            <Heart 
-              size={24} 
-              className={isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"} 
+            <Heart
+              size={24}
+              className={isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"}
             />
           </button>
-          
+
           <Carousel
             showThumbs={true}
             infiniteLoop={true}
@@ -151,13 +156,13 @@ function ProductDetail() {
 
           <div className="space-y-2">
             <div className="flex items-center gap-4">
-              {product.discountPrice > 0 ? (
+              {product.discountPercentage > 0 ? (
                 <>
                   <span className="text-3xl font-bold text-red-600">
-                    ${product.discountPrice.toFixed(2)}
+                    ₹{finalPrice.toFixed(2)}
                   </span>
                   <span className="text-xl line-through text-gray-500">
-                    ${product.price.toFixed(2)}
+                    ₹{product.basePrice.toFixed(2)}
                   </span>
                   {discountPercentage > 0 && (
                     <span className="bg-red-100 text-red-800 text-sm font-medium px-2.5 py-0.5 rounded">
@@ -167,7 +172,7 @@ function ProductDetail() {
                 </>
               ) : (
                 <span className="text-3xl font-bold">
-                  ${product.price.toFixed(2)}
+                  ₹{finalPrice.toFixed(2)}
                 </span>
               )}
             </div>
@@ -179,13 +184,50 @@ function ProductDetail() {
             )}
           </div>
 
-          {/* ... (rest of your product info) ... */}
+          {/* Product Description */}
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Description</h3>
+            <p className="text-gray-600 dark:text-gray-300">{product.description}</p>
+          </div>
+
+          {/* Product Brand */}
+          {product.brand && (
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Brand</h3>
+              <p className="text-gray-600 dark:text-gray-300">{product.brand}</p>
+            </div>
+          )}
+
+          {/* Product Categories */}
+          {product.categories && product.categories.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Categories</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.categories.map((category) => (
+                  <span
+                    key={category._id}
+                    className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm"
+                  >
+                    {category.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seller Information */}
+          {seller && (
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Sold By</h3>
+              <p className="text-gray-600 dark:text-gray-300">{seller.name}</p>
+            </div>
+          )}
 
           {/* Quantity Selector */}
           <div className="flex items-center space-x-4">
             <span className="font-medium">Quantity:</span>
             <div className="flex items-center border rounded-lg overflow-hidden">
-              <button 
+              <button
                 onClick={decrementQuantity}
                 className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 disabled={quantity <= 1}
@@ -193,7 +235,7 @@ function ProductDetail() {
                 -
               </button>
               <span className="px-4 py-1">{quantity}</span>
-              <button 
+              <button
                 onClick={incrementQuantity}
                 className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 disabled={quantity >= product.stock}
