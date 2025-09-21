@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -10,21 +10,62 @@ import {
   deleteItem,
   clearCart,
 } from '../../features/cart/cartSlice';
+import { addToWishlist } from '../../features/wishlist/wishlistSlice';
+import { useGetProductByIdQuery } from '../../features/products/productApiSlice';
 import { toast } from 'react-hot-toast';
 import AccessDenied from '../../components/common/AccessDenied';
+import { FaExclamationTriangle, FaHeart, FaTrash } from 'react-icons/fa';
 
 function Cart() {
   const { user } = useSelector((state) => state.auth);
   const cartItems = useSelector(selectCartItems);
   const totalAmount = useSelector(selectCartTotalAmount);
   const totalQuantity = useSelector(selectCartTotalQuantity);
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const [outOfStockItems, setOutOfStockItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   if (user?.role === 'seller' || user?.role === 'admin') {
     return <AccessDenied />;
   }
+
+  // Check for out of stock items
+  useEffect(() => {
+    const checkStockAvailability = async () => {
+      setLoading(true);
+      const outOfStock = [];
+      
+      for (const item of cartItems) {
+        try {
+          // Fetch current product data to check stock
+          const { data: product } = await dispatch(
+            useGetProductByIdQuery.initiate(item._id)
+          );
+          
+          if (product && product.stock < item.quantity) {
+            outOfStock.push({
+              ...item,
+              availableStock: product.stock
+            });
+          }
+        } catch (error) {
+          console.error('Error checking stock for product:', item._id, error);
+          // If we can't verify stock, assume it's available
+        }
+      }
+      
+      setOutOfStockItems(outOfStock);
+      setLoading(false);
+    };
+
+    if (cartItems.length > 0) {
+      checkStockAvailability();
+    } else {
+      setLoading(false);
+    }
+  }, [cartItems, dispatch]);
 
   const handleIncrease = (item) => {
     // Check if we can add more (stock limit)
@@ -49,6 +90,12 @@ function Cart() {
     toast.success('Item removed from cart');
   };
 
+  const handleMoveToWishlist = (item) => {
+    dispatch(deleteItem(item._id));
+    dispatch(addToWishlist(item));
+    toast.success('Item moved to wishlist');
+  };
+
   const handleClearCart = () => {
     dispatch(clearCart());
     toast.success('Cart cleared');
@@ -56,6 +103,13 @@ function Cart() {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error('Your cart is empty');
+    
+    // Check if there are any out of stock items
+    if (outOfStockItems.length > 0) {
+      toast.error('Please resolve out of stock items before checkout');
+      return;
+    }
+    
     navigate('/checkout');
   };
 
@@ -104,6 +158,19 @@ function Cart() {
   return (
     <div className="max-w-6xl mx-auto p-4">
       <h2 className="text-3xl font-bold mb-6">Your Cart</h2>
+
+      {/* Out of Stock Warning Banner */}
+      {outOfStockItems.length > 0 && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
+          <div className="flex items-center">
+            <FaExclamationTriangle className="mr-2" />
+            <span className="font-semibold">Attention required!</span>
+          </div>
+          <p className="mt-1">
+            {outOfStockItems.length} item(s) in your cart are out of stock or have limited availability.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cart Items */}
