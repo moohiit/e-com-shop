@@ -105,7 +105,7 @@ export const createProduct = async (req, res) => {
 };
 
 /* ---------- Shared Query Logic ---------- */
-const listProducts = async (req, res, baseQuery = {}) => {
+export const listProducts = async (req, res, baseQuery = {}) => {
   try {
     const {
       search,
@@ -120,33 +120,55 @@ const listProducts = async (req, res, baseQuery = {}) => {
 
     const query = { ...baseQuery };
 
-    // Fix: Check for truthy AND non-empty string values
-    if (search && search.trim() !== "") query.name = { $regex: search, $options: "i" };
-    if (brand && brand.trim() !== "") query.brand = { $regex: brand, $options: "i" };
+    // text filters
+    if (search?.trim()) query.name = { $regex: search.trim(), $options: "i" };
+    if (brand?.trim()) query.brand = { $regex: brand.trim(), $options: "i" };
 
-    if (category && category.trim() !== "") {
-      if (!isValidObjectId(category)) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid category ID." });
+    // ----- CATEGORY FILTER -----
+    if (category?.trim()) {
+      let categoryIds = [];
+
+      // if valid ObjectId, use it directly
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        categoryIds.push(category);
+        const subCats = await Category.find({ ancestors: category }).select(
+          "_id"
+        );
+        categoryIds.push(...subCats.map((c) => c._id));
+      } else {
+        // otherwise treat it as a name or slug (case-insensitive)
+        const parentCat = await Category.findOne({
+          $or: [
+            { name: new RegExp(`^${category}$`, "i") },
+            { slug: new RegExp(`^${category}$`, "i") },
+          ],
+        }).select("_id");
+        if (!parentCat) {
+          return res.status(404).json({
+            success: false,
+            message: "Category not found",
+          });
+        }
+        categoryIds.push(parentCat._id);
+        const subCats = await Category.find({
+          ancestors: parentCat._id,
+        }).select("_id");
+        categoryIds.push(...subCats.map((c) => c._id));
       }
-      // Include subcategories as well
-      const categoryIds = [category];
-      const subCats = await Category.find({ ancestors: category }).select(
-        "_id"
-      );
-      subCats.forEach((c) => categoryIds.push(c._id));
+
       query.categories = { $in: categoryIds };
     }
 
+    // price range
     const priceFilter = buildPriceFilter(minPrice, maxPrice);
     if (priceFilter) query.basePrice = priceFilter;
-    console.log("Query:", query);
+
+    // pagination & fetch
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate(populateFields)
+      .populate("categories") // or your populateFields
       .sort(buildSortOption(sort))
-      .skip((page - 1) * limit)
+      .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
 
     res.json({
@@ -155,11 +177,12 @@ const listProducts = async (req, res, baseQuery = {}) => {
       pagination: {
         total,
         page: Number(page),
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / Number(limit)),
         limit: Number(limit),
       },
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

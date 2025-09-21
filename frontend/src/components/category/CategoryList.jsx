@@ -22,17 +22,36 @@ export default function CategoryList({ isAdmin = false }) {
   const categories = response?.categories || [];
 
   const filteredCategories = categories.filter((cat) => {
-    const q = searchQuery.toLowerCase();
-    const parentNames = (cat.parents || [])
-      .map((p) => p?.name)
-      .filter(Boolean)
-      .join(", ")
-      .toLowerCase();
-    return (
-      cat.name.toLowerCase().includes(q) ||
-      cat.slug.toLowerCase().includes(q) ||
-      parentNames.includes(q)
-    );
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true; // Show all if search is empty
+
+    // Check name and slug (guaranteed strings)
+    const name = (cat.name || "").toLowerCase();
+    const slug = (cat.slug || "").toLowerCase();
+
+    if (name.includes(q) || slug.includes(q)) {
+      return true;
+    }
+
+    // Check parents - handle both ObjectIds and populated documents
+    if (cat.parents && cat.parents.length > 0) {
+      const parentNames = cat.parents
+        .map((p) => {
+          // If parent is a populated document with name property
+          if (typeof p === 'object' && p !== null && p.name) {
+            return p.name.toLowerCase();
+          }
+          // If parent is just an ObjectId string, we can't search by name
+          return "";
+        })
+        .filter(name => name.includes(q));
+
+      if (parentNames.length > 0) {
+        return true;
+      }
+    }
+
+    return false;
   });
 
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -72,7 +91,7 @@ export default function CategoryList({ isAdmin = false }) {
   if (error) return <p className="text-red-500">Error loading categories</p>;
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4">
       {/* Search */}
       <div className="mb-4">
         <input
@@ -85,6 +104,12 @@ export default function CategoryList({ isAdmin = false }) {
           }}
           className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 p-2 w-full rounded"
         />
+      </div>
+
+      {/* Results count */}
+      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        Showing {filteredCategories.length} of {categories.length} categories
+        {searchQuery && ` for "${searchQuery}"`}
       </div>
 
       {/* Table */}
@@ -100,63 +125,86 @@ export default function CategoryList({ isAdmin = false }) {
           </tr>
         </thead>
         <tbody>
-          {paginatedCategories.map((cat) => (
-            <tr key={cat._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td className="p-2 border-b dark:border-gray-700">
-                {cat.image?.imageUrl ? (
-                  <img
-                    src={cat.image.imageUrl}
-                    alt={cat.name}
-                    className="w-16 h-16 object-cover rounded-md mx-auto"
-                  />
-                ) : (
-                  <span className="text-gray-400 italic">No Image</span>
-                )}
-              </td>
-              <td className="p-2 border-b dark:border-gray-700">{cat.name}</td>
-              <td className="p-2 border-b dark:border-gray-700">{cat.slug}</td>
-              <td className="p-2 border-b dark:border-gray-700">
-                {cat.parents?.length
-                  ? cat.parents.map((p) => p?.name).filter(Boolean).join(", ")
-                  : "—"}
-              </td>
-              <td className="p-2 border-b dark:border-gray-700">
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-semibold ${cat.isActive
-                      ? "bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900"
-                      : "bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900"
-                    }`}
-                >
-                  {cat.isActive ? "Active" : "Inactive"}
-                </span>
-              </td>
-              <td className="p-2 border-b dark:border-gray-700 flex gap-2 flex-wrap">
-                <button
-                  onClick={() => handleEdit(cat)}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs hover:bg-blue-200 dark:bg-blue-200 dark:text-blue-900"
-                >
-                  Edit
-                </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => handleDelete(cat._id)}
-                    className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
-                  >
-                    Delete
-                  </button>
-                )}
-                <button
-                  onClick={() => handleToggle(cat._id)}
-                  className={`px-2 py-1 rounded text-xs font-semibold ${cat.isActive
-                      ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
-                      : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900"
-                    }`}
-                >
-                  {cat.isActive ? "Deactivate" : "Activate"}
-                </button>
+          {paginatedCategories.length === 0 ? (
+            <tr>
+              <td colSpan="6" className="p-4 text-center text-gray-500 dark:text-gray-400">
+                {searchQuery ? "No categories found matching your search" : "No categories available"}
               </td>
             </tr>
-          ))}
+          ) : (
+            paginatedCategories.map((cat) => (
+              <tr
+                key={cat._id}
+                className="hover:bg-gray-50 dark:hover:bg-gray-700 h-20 align-middle"
+              >
+                <td className="p-2 border-b dark:border-gray-700 text-center">
+                  {cat.image?.imageUrl ? (
+                    <img
+                      src={cat.image.imageUrl}
+                      alt={cat.name}
+                      className="w-16 h-16 object-cover rounded-md mx-auto"
+                    />
+                  ) : (
+                    <span className="text-gray-400 italic">No Image</span>
+                  )}
+                </td>
+
+                <td className="p-2 border-b dark:border-gray-700 align-middle">
+                  {cat.name}
+                </td>
+                <td className="p-2 border-b dark:border-gray-700 align-middle">
+                  {cat.slug}
+                </td>
+                <td className="p-2 border-b dark:border-gray-700 align-middle">
+                  {cat.parents?.length
+                    ? cat.parents
+                      .map((p) => (typeof p === 'object' && p?.name ? p.name : ''))
+                      .filter(Boolean)
+                      .join(", ") || "—"
+                    : "—"}
+                </td>
+                <td className="p-2 border-b dark:border-gray-700 align-middle">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${cat.isActive
+                        ? "bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900"
+                        : "bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900"
+                      }`}
+                  >
+                    {cat.isActive ? "Active" : "Inactive"}
+                  </span>
+                </td>
+
+                {/* Actions */}
+                <td className="p-2 border-b dark:border-gray-700 align-middle">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => handleEdit(cat)}
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs hover:bg-blue-200 dark:bg-blue-200 dark:text-blue-900"
+                    >
+                      Edit
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(cat._id)}
+                        className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleToggle(cat._id)}
+                      className={`px-2 py-1 rounded text-xs font-semibold ${cat.isActive
+                          ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:text-red-900"
+                          : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:text-green-900"
+                        }`}
+                    >
+                      {cat.isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 

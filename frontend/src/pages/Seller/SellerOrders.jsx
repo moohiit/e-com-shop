@@ -380,7 +380,7 @@ function SellerOrders() {
                                     ml: 1,
                                     color: theme.palette.text.secondary
                                   }}>
-                                    on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
+                                    on {format(new Date(item.delervedAt), 'MMM dd, yyyy')}
                                   </Typography>
                                 )}
                                 {item.isCancelled && item.cancelledAt && (

@@ -110,6 +110,7 @@ export const getCategoryById = async (req, res) => {
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("body", req.body);
     const { name, parents = [], image } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
