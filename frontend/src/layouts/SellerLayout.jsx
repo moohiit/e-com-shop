@@ -18,6 +18,7 @@ export default function SellerLayout() {
     { to: '/seller/products', label: 'Manage Products' },
     { to: '/seller/add-product', label: 'Add Product' },
     { to: '/seller/orders', label: 'Manage Orders' },
+    { to: '/seller/returns', label: 'Return Requests' },
     { to: '/seller/categories', label: 'Manage Categories' },
   ]
 
