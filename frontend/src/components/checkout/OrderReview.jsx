@@ -206,6 +206,11 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         <div className="border-t pt-2 mt-2">
           <p className="font-semibold text-lg">Total Price: ₹{totalPrice.toFixed(2)}</p>
         </div>
+        {paymentMethod === "Cash on Delivery" && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+            Pay ₹{totalPrice.toFixed(2)} at the time of delivery
+          </p>
+        )}
       </div>
 
       <div className="flex justify-between">

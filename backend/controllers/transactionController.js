@@ -4,6 +4,9 @@ import Order from "../models/Order.js";
 import Transaction from "../models/Transaction.js";
 import SellerOrder from "../models/SellerOrder.js";
 import SellerTransaction from "../models/SellerTransaction.js";
+import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
+import { orderConfirmationEmail } from "../utils/emailTemplates.js";
 
 // Create Razorpay Order (Initiate Payment)
 export const createRazorpayOrder = async (req, res) => {

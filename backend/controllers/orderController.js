@@ -1,6 +1,9 @@
 import Order from "../models/Order.js";
 import SellerOrder from "../models/SellerOrder.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
+import { orderConfirmationEmail, orderCancelledEmail } from "../utils/emailTemplates.js";
 
 // 🚀 Create Order with Seller Orders
 export const createOrder = async (req, res) => {
@@ -203,6 +206,17 @@ export const createOrder = async (req, res) => {
     // Link seller orders to main order
     createdOrder.sellerOrders = sellerOrders;
     await createdOrder.save();
+
+    // Send order confirmation email
+    try {
+      const user = await User.findById(req.user._id).select("name email");
+      if (user?.email) {
+        const { subject, html } = orderConfirmationEmail(createdOrder, user.name);
+        await sendEmail(user.email, subject, html);
+      }
+    } catch (emailErr) {
+      console.error("Order confirmation email failed:", emailErr.message);
+    }
 
     res.status(201).json({
       order: createdOrder,
@@ -489,6 +503,19 @@ export const cancelOrderItem = async (req, res) => {
 
     await order.save();
 
+    // Send cancellation email
+    try {
+      const user = await User.findById(req.user._id).select("name email");
+      if (user?.email) {
+        const { subject, html } = orderCancelledEmail(
+          order, user.name, orderItem.name, reason
+        );
+        await sendEmail(user.email, subject, html);
+      }
+    } catch (emailErr) {
+      console.error("Cancellation email failed:", emailErr.message);
+    }
+
     res.json({
       success: true,
       message: "Order item cancelled successfully",
@@ -496,9 +523,9 @@ export const cancelOrderItem = async (req, res) => {
     });
   } catch (error) {
     console.error("Cancel order item error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to cancel order item" 
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order item"
     });
   }
 };
