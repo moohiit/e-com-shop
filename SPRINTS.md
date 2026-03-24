@@ -26,14 +26,14 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Order confirmation email on successful payment | Backend | [ ] |
-| Shipping status update email (when seller marks shipped) | Backend | [ ] |
-| Delivery confirmation email | Backend | [ ] |
-| Order cancellation email | Backend | [ ] |
-| HTML email templates (reusable) | Backend | [ ] |
-| COD payment method backend support | Backend | [ ] |
-| COD order flow (mark as unpaid, collect on delivery) | Backend | [ ] |
-| Update checkout UI to handle COD selection properly | Frontend | [ ] |
+| Order confirmation email on successful payment | Backend | [x] |
+| Shipping status update email (when seller marks shipped) | Backend | [x] |
+| Delivery confirmation email | Backend | [x] |
+| Order cancellation email | Backend | [x] |
+| HTML email templates (reusable) | Backend | [x] |
+| COD payment method backend support | Backend | [x] |
+| COD order flow (mark as unpaid, collect on delivery) | Backend | [x] |
+| Update checkout UI to handle COD selection properly | Frontend | [x] |
 
 **Depends on:** Nothing
 **Unlocks:** Complete order communication, more payment options

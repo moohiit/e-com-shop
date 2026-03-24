@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-24
+> Last updated: 2026-03-24 | Sprint 2 completed
 
 ---
 
@@ -47,6 +47,23 @@
 - [x] Admin User Management (list, edit, delete, toggle)
 - [x] Admin Product & Category Management
 
+### Reviews & Ratings (Sprint 1)
+- [x] Review model with unique user+product constraint
+- [x] Review API (CRUD, pagination, sorting)
+- [x] Interactive star rating component
+- [x] Submit/edit review form on Product Detail page
+- [x] Review list with pagination and sort (latest/highest/lowest)
+- [x] Auto-calculated average rating on Product model
+
+### Order Emails & COD (Sprint 2)
+- [x] Order confirmation email on order creation
+- [x] Shipping status update email
+- [x] Delivery confirmation email
+- [x] Order cancellation email
+- [x] Reusable HTML email templates (branded, responsive)
+- [x] COD payment method (backend + improved checkout UI)
+- [x] COD auto-marks order as paid when all items delivered
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -59,9 +76,8 @@
 
 | # | Feature | What's Missing |
 |---|---------|----------------|
-| 1 | Product Reviews | Model exists, but no API routes, no frontend UI for submitting/displaying reviews |
-| 2 | Seller Dashboard | Page is a placeholder - needs stats, charts, analytics |
-| 3 | Wishlist Backend Sync | Currently local-only (localStorage) - no backend persistence |
+| 1 | Seller Dashboard | Page is a placeholder - needs stats, charts, analytics |
+| 2 | Wishlist Backend Sync | Currently local-only (localStorage) - no backend persistence |
 
 ---
 
@@ -69,10 +85,10 @@
 
 ### High Priority
 
-- [ ] **1. Product Reviews & Ratings UI** - Submit reviews on product page, display review list, calculate and show average rating aggregation
+- [x] ~~**1. Product Reviews & Ratings UI**~~ — Completed in Sprint 1
 - [ ] **2. Payment Refunds** - Process refunds via Razorpay when orders/items are cancelled
 - [ ] **3. Return/Exchange (RMA) System** - Users request returns, sellers approve/reject, trigger refund flow
-- [ ] **4. Order Status Email Notifications** - Email users on order confirmation, shipping updates, delivery confirmation
+- [x] ~~**4. Order Status Email Notifications**~~ — Completed in Sprint 2
 
 ### Medium Priority
 
@@ -80,7 +96,7 @@
 - [ ] **7. Admin Analytics & Reports** - Sales reports, user growth charts, revenue trends (Chart.js / Recharts)
 - [ ] **8. Inventory Management** - Low-stock alerts, bulk stock updates, auto-hide out-of-stock products
 - [ ] **9. Wishlist Backend Sync** - Persist wishlist in database, sync across devices and sessions
-- [ ] **10. COD (Cash on Delivery)** - Backend support for COD payment method (frontend UI partially exists)
+- [x] ~~**10. COD (Cash on Delivery)**~~ — Completed in Sprint 2
 - [ ] **11. Order Invoice/Receipt PDF** - Generate and download PDF invoice for each order
 
 ### Lower Priority
@@ -100,10 +116,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 19 features |
-| Partially Done   | 3 features  |
-| Remaining        | 18 features |
-| **Overall**      | **~65% complete** |
+| Completed        | 22 features |
+| Partially Done   | 2 features  |
+| Remaining        | 15 features |
+| **Overall**      | **~72% complete** |
 
 ---
 
