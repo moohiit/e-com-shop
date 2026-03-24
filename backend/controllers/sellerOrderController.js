@@ -1,5 +1,13 @@
 import SellerOrder from "../models/SellerOrder.js";
 import Order from "../models/Order.js";
+import Product from "../models/Product.js";
+import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
+import {
+  orderShippedEmail,
+  orderDeliveredEmail,
+  orderCancelledEmail,
+} from "../utils/emailTemplates.js";
 
 // 🚀 Seller - Get all their orders
 export const getSellerOrders = async (req, res) => {
@@ -171,10 +179,41 @@ export const updateSellerOrderItemStatus = async (req, res) => {
         }
 
         await mainOrder.save();
+
+        // COD: auto-mark order as paid when all items are delivered
+        if (
+          status === "Delivered" &&
+          mainOrder.paymentMethod === "Cash on Delivery" &&
+          !mainOrder.isPaid
+        ) {
+          const allDelivered = mainOrder.orderItems.every(
+            (item) => item.isDelivered || item.isCancelled
+          );
+          if (allDelivered) {
+            mainOrder.isPaid = true;
+            mainOrder.paidAt = new Date();
+            await mainOrder.save();
+          }
+        }
       }
     }
 
     await sellerOrder.save();
+
+    // Send status email to buyer
+    try {
+      if (status === "Shipped" || status === "Delivered") {
+        const buyer = await User.findById(sellerOrder.user).select("name email");
+        if (buyer?.email) {
+          const emailFn = status === "Shipped" ? orderShippedEmail : orderDeliveredEmail;
+          const refreshedOrder = await Order.findById(sellerOrder.order);
+          const { subject, html } = emailFn(refreshedOrder, buyer.name, orderItem.name);
+          await sendEmail(buyer.email, subject, html);
+        }
+      }
+    } catch (emailErr) {
+      console.error("Status update email failed:", emailErr.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -263,6 +302,20 @@ export const cancelSellerOrderItem = async (req, res) => {
     }
 
     await sellerOrder.save();
+
+    // Send cancellation email to buyer
+    try {
+      const buyer = await User.findById(sellerOrder.user).select("name email");
+      if (buyer?.email) {
+        const refreshedOrder = await Order.findById(sellerOrder.order);
+        const { subject, html } = orderCancelledEmail(
+          refreshedOrder, buyer.name, orderItem.name, reason
+        );
+        await sendEmail(buyer.email, subject, html);
+      }
+    } catch (emailErr) {
+      console.error("Cancellation email failed:", emailErr.message);
+    }
 
     res.json({
       success: true,
