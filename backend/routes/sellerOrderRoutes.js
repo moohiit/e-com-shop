@@ -5,12 +5,14 @@ import {
   getSellerOrderById,
   updateSellerOrderItemStatus,
   cancelSellerOrderItem,
+  getSellerDashboard,
 } from "../controllers/sellerOrderController.js";
 
 const router = express.Router();
 
 router.use(protect, isSeller);
 
+router.route("/dashboard").get(getSellerDashboard);
 router.route("/").get(getSellerOrders);
 router.route("/:id").get(getSellerOrderById);
 router.route("/:id/item-status").put(updateSellerOrderItemStatus);
