@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { Carousel } from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import Rating from '../../components/common/Rating';
+import ReviewForm from '../../components/reviews/ReviewForm';
+import ReviewList from '../../components/reviews/ReviewList';
 import toast from "react-hot-toast";
 
 function ProductDetail() {
@@ -268,6 +270,13 @@ function ProductDetail() {
           </div>
         </div>
       </motion.div>
+
+      {/* Reviews Section */}
+      <div className="mt-12 space-y-8">
+        <hr className="border-gray-200 dark:border-gray-700" />
+        <ReviewForm productId={id} />
+        <ReviewList productId={id} />
+      </div>
     </div>
   );
 }

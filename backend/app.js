@@ -46,7 +46,10 @@ app.use('/api/orders', orderRoutes);
 import sellerOrderRoutes from './routes/sellerOrderRoutes.js';
 app.use('/api/seller-orders', sellerOrderRoutes);
 // Import and use the transaction routes
-import transactionRoutes from './routes/transactionRoutes.js';    
+import transactionRoutes from './routes/transactionRoutes.js';
 app.use('/api/transactions', transactionRoutes);
+// Import and use the review routes
+import reviewRoutes from './routes/reviewRoutes.js';
+app.use('/api/reviews', reviewRoutes);
 
 export default app;

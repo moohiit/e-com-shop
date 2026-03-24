@@ -9,12 +9,12 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Review API routes & controller (CRUD) | Backend | [ ] |
-| Calculate & store average rating on Product model | Backend | [ ] |
-| Submit review form on Product Detail page | Frontend | [ ] |
-| Display review list with ratings on Product Detail page | Frontend | [ ] |
-| Prevent duplicate reviews per user per product | Backend | [ ] |
-| Star rating component (interactive + display) | Frontend | [ ] |
+| Review API routes & controller (CRUD) | Backend | [x] |
+| Calculate & store average rating on Product model | Backend | [x] |
+| Submit review form on Product Detail page | Frontend | [x] |
+| Display review list with ratings on Product Detail page | Frontend | [x] |
+| Prevent duplicate reviews per user per product | Backend | [x] |
+| Star rating component (interactive + display) | Frontend | [x] |
 
 **Depends on:** Nothing (Review model exists)
 **Unlocks:** Better product pages, trust signals
