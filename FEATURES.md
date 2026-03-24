@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-24 | Sprint 2 completed
+> Last updated: 2026-03-24 | Sprint 3 completed
 
 ---
 
@@ -64,6 +64,14 @@
 - [x] COD payment method (backend + improved checkout UI)
 - [x] COD auto-marks order as paid when all items delivered
 
+### Refunds & Returns (Sprint 3)
+- [x] Razorpay refund integration (auto-refund on cancellation for paid orders)
+- [x] Return request system (model, API, 7-day return window)
+- [x] User: request return from order details with reason
+- [x] Seller: view/approve/reject return requests (dedicated page)
+- [x] Auto-refund on return approval + stock restoration
+- [x] Return status tracking on order details (Pending/Approved/Rejected/Refunded)
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -86,8 +94,8 @@
 ### High Priority
 
 - [x] ~~**1. Product Reviews & Ratings UI**~~ — Completed in Sprint 1
-- [ ] **2. Payment Refunds** - Process refunds via Razorpay when orders/items are cancelled
-- [ ] **3. Return/Exchange (RMA) System** - Users request returns, sellers approve/reject, trigger refund flow
+- [x] ~~**2. Payment Refunds**~~ — Completed in Sprint 3
+- [x] ~~**3. Return/Exchange (RMA) System**~~ — Completed in Sprint 3
 - [x] ~~**4. Order Status Email Notifications**~~ — Completed in Sprint 2
 
 ### Medium Priority
@@ -116,10 +124,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 22 features |
+| Completed        | 24 features |
 | Partially Done   | 2 features  |
-| Remaining        | 15 features |
-| **Overall**      | **~72% complete** |
+| Remaining        | 13 features |
+| **Overall**      | **~77% complete** |
 
 ---
 
