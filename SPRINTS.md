@@ -45,14 +45,14 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Razorpay refund API integration (full & partial) | Backend | [ ] |
-| Refund on order item cancellation (auto-trigger) | Backend | [ ] |
-| Refund status tracking in Transaction model | Backend | [ ] |
-| Return request model/schema | Backend | [ ] |
-| User: request return (with reason) from order details | Frontend + Backend | [ ] |
-| Seller: view return requests, approve/reject | Frontend + Backend | [ ] |
-| Auto-trigger refund on return approval | Backend | [ ] |
-| Return status tracking UI (user + seller side) | Frontend | [ ] |
+| Razorpay refund API integration (full & partial) | Backend | [x] |
+| Refund on order item cancellation (auto-trigger) | Backend | [x] |
+| Refund status tracking in Transaction model | Backend | [x] |
+| Return request model/schema | Backend | [x] |
+| User: request return (with reason) from order details | Frontend + Backend | [x] |
+| Seller: view return requests, approve/reject | Frontend + Backend | [x] |
+| Auto-trigger refund on return approval | Backend | [x] |
+| Return status tracking UI (user + seller side) | Frontend | [x] |
 
 **Depends on:** Sprint 2 (emails used for refund/return notifications)
 **Unlocks:** Complete post-purchase flow

@@ -4,6 +4,7 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import sendEmail from "../utils/sendEmail.js";
 import { orderConfirmationEmail, orderCancelledEmail } from "../utils/emailTemplates.js";
+import { processRefund } from "./refundController.js";
 
 // 🚀 Create Order with Seller Orders
 export const createOrder = async (req, res) => {
@@ -503,6 +504,16 @@ export const cancelOrderItem = async (req, res) => {
 
     await order.save();
 
+    // Auto-refund for paid online orders
+    let refundInfo = null;
+    if (order.isPaid && order.paymentMethod !== "Cash on Delivery") {
+      const refundAmount = orderItem.price * orderItem.quantity;
+      const result = await processRefund(order._id, refundAmount);
+      refundInfo = result.success
+        ? { refunded: true, refundId: result.refundId, amount: refundAmount }
+        : { refunded: false, message: result.message };
+    }
+
     // Send cancellation email
     try {
       const user = await User.findById(req.user._id).select("name email");
@@ -520,6 +531,7 @@ export const cancelOrderItem = async (req, res) => {
       success: true,
       message: "Order item cancelled successfully",
       order,
+      refund: refundInfo,
     });
   } catch (error) {
     console.error("Cancel order item error:", error);
