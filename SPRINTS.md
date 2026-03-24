@@ -64,14 +64,14 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Install Recharts | Frontend | [ ] |
-| Seller dashboard API: revenue, orders, top products | Backend | [ ] |
-| Seller dashboard UI: stats cards + charts | Frontend | [ ] |
-| Seller earnings summary & transaction history | Frontend | [ ] |
-| Admin analytics API: sales, users, growth trends | Backend | [ ] |
-| Admin dashboard: revenue chart (daily/weekly/monthly) | Frontend | [ ] |
-| Admin dashboard: user growth chart | Frontend | [ ] |
-| Admin dashboard: top products & categories report | Frontend | [ ] |
+| Install Recharts | Frontend | [x] |
+| Seller dashboard API: revenue, orders, top products | Backend | [x] |
+| Seller dashboard UI: stats cards + charts | Frontend | [x] |
+| Seller earnings summary & transaction history | Frontend | [x] |
+| Admin analytics API: sales, users, growth trends | Backend | [x] |
+| Admin dashboard: revenue chart (daily/weekly/monthly) | Frontend | [x] |
+| Admin dashboard: user growth chart | Frontend | [x] |
+| Admin dashboard: top products & categories report | Frontend | [x] |
 
 **Depends on:** Nothing (but better after Sprint 3 since refund data feeds into reports)
 **Unlocks:** Business insights for sellers and admins

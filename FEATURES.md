@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-24 | Sprint 3 completed
+> Last updated: 2026-03-24 | Sprint 4 completed
 
 ---
 
@@ -72,6 +72,11 @@
 - [x] Auto-refund on return approval + stock restoration
 - [x] Return status tracking on order details (Pending/Approved/Rejected/Refunded)
 
+### Seller & Admin Analytics (Sprint 4)
+- [x] Seller Dashboard: stat cards (orders, revenue, products), revenue bar chart, order status pie chart, top products table
+- [x] Admin Dashboard: stat cards with time filters (today/month/year/all), revenue+orders bar chart, user growth line chart, top products table
+- [x] Backend aggregation pipelines for revenue trends, user growth, top products
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -84,8 +89,7 @@
 
 | # | Feature | What's Missing |
 |---|---------|----------------|
-| 1 | Seller Dashboard | Page is a placeholder - needs stats, charts, analytics |
-| 2 | Wishlist Backend Sync | Currently local-only (localStorage) - no backend persistence |
+| 1 | Wishlist Backend Sync | Currently local-only (localStorage) - no backend persistence |
 
 ---
 
@@ -100,8 +104,8 @@
 
 ### Medium Priority
 
-- [ ] **6. Seller Dashboard Analytics** - Revenue charts, top-selling products, order trends, earnings summary
-- [ ] **7. Admin Analytics & Reports** - Sales reports, user growth charts, revenue trends (Chart.js / Recharts)
+- [x] ~~**6. Seller Dashboard Analytics**~~ — Completed in Sprint 4
+- [x] ~~**7. Admin Analytics & Reports**~~ — Completed in Sprint 4
 - [ ] **8. Inventory Management** - Low-stock alerts, bulk stock updates, auto-hide out-of-stock products
 - [ ] **9. Wishlist Backend Sync** - Persist wishlist in database, sync across devices and sessions
 - [x] ~~**10. COD (Cash on Delivery)**~~ — Completed in Sprint 2
@@ -124,10 +128,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 24 features |
-| Partially Done   | 2 features  |
-| Remaining        | 13 features |
-| **Overall**      | **~77% complete** |
+| Completed        | 27 features |
+| Partially Done   | 1 feature   |
+| Remaining        | 11 features |
+| **Overall**      | **~82% complete** |
 
 ---
 

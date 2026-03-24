@@ -28,6 +28,12 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
       ],
     }),
 
+    // ✅ QUERY: Fetch seller dashboard analytics
+    getSellerDashboard: builder.query({
+      query: () => "/seller-orders/dashboard",
+      providesTags: ["SellerOrder"],
+    }),
+
     // ✅ MUTATION: Cancel a seller order item
     cancelSellerOrderItem: builder.mutation({
       query: ({ id, productId, reason }) => ({
@@ -47,6 +53,7 @@ export const sellerOrderApiSlice = apiSlice.injectEndpoints({
 export const {
   useGetSellerOrdersQuery,
   useGetSellerOrderByIdQuery,
+  useGetSellerDashboardQuery,
   useUpdateSellerOrderItemStatusMutation,
   useCancelSellerOrderItemMutation,
 } = sellerOrderApiSlice;
