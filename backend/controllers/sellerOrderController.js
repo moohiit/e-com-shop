@@ -330,3 +330,96 @@ export const cancelSellerOrderItem = async (req, res) => {
     });
   }
 };
+
+// 🚀 Seller - Dashboard Analytics
+export const getSellerDashboard = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+
+    // Summary stats
+    const allOrders = await SellerOrder.find({ seller: sellerId });
+
+    const totalOrders = allOrders.length;
+    const totalRevenue = allOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const paidRevenue = allOrders
+      .filter((o) => o.isPaid)
+      .reduce((sum, o) => sum + o.totalPrice, 0);
+    const totalProducts = await Product.countDocuments({ seller: sellerId });
+
+    // Status counts
+    let processing = 0,
+      shipped = 0,
+      delivered = 0,
+      cancelled = 0;
+    for (const order of allOrders) {
+      for (const item of order.items) {
+        if (item.orderStatus === "Processing") processing++;
+        else if (item.orderStatus === "Shipped") shipped++;
+        else if (item.orderStatus === "Delivered") delivered++;
+        else if (item.orderStatus === "Cancelled") cancelled++;
+      }
+    }
+
+    // Revenue trend — last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const revenueTrend = await SellerOrder.aggregate([
+      {
+        $match: {
+          seller: sellerId,
+          createdAt: { $gte: sevenDaysAgo },
+          isPaid: true,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          revenue: { $sum: "$totalPrice" },
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Top products
+    const topProducts = await SellerOrder.aggregate([
+      { $match: { seller: sellerId } },
+      { $unwind: "$items" },
+      { $match: { "items.isCancelled": { $ne: true } } },
+      {
+        $group: {
+          _id: "$items.product",
+          name: { $first: "$items.name" },
+          totalSold: { $sum: "$items.quantity" },
+          totalRevenue: {
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
+          },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalOrders,
+        totalRevenue,
+        paidRevenue,
+        totalProducts,
+        statusCounts: { processing, shipped, delivered, cancelled },
+        charts: { revenueTrend, topProducts },
+      },
+    });
+  } catch (error) {
+    console.error("Seller dashboard error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to load dashboard",
+    });
+  }
+};

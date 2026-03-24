@@ -1,11 +1,9 @@
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import Category from "../models/Category.js";
-// import Order from "../models/Order.js";
+import Order from "../models/Order.js";
 
 // @desc    Get all users (admin only)
-// @route   GET /api/admin/users
-// @access  Private/Admin
 export const getAllUsers = async (req, res) => {
   try {
     const query = {};
@@ -15,7 +13,6 @@ export const getAllUsers = async (req, res) => {
     if (req.query.isActive !== undefined)
       query.isActive = req.query.isActive === "true";
 
-    // Search filter
     if (req.query.keyword) {
       query.$or = [
         { name: { $regex: req.query.keyword, $options: "i" } },
@@ -54,10 +51,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-
 // @desc    Get user by ID (admin only)
-// @route   GET /api/admin/users/:id
-// @access  Private/Admin
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById({ _id: req.params.id }).select(
@@ -79,8 +73,6 @@ export const getUserById = async (req, res) => {
 };
 
 // @desc    Update user by ID (admin only)
-// @route   PUT /api/admin/users/:id
-// @access  Private/Admin
 export const updateUser = async (req, res) => {
   try {
     const { name, email, role, isActive } = req.body;
@@ -94,7 +86,7 @@ export const updateUser = async (req, res) => {
     user.name = name || user.name;
     user.email = email || user.email;
     user.role = role || user.role;
-    user.isActive = isActive !== undefined ? isActive : user.isActive; // allow toggling active status
+    user.isActive = isActive !== undefined ? isActive : user.isActive;
 
     await user.save();
 
@@ -109,8 +101,6 @@ export const updateUser = async (req, res) => {
 };
 
 // @desc    Delete user by ID (admin only)
-// @route   DELETE /api/admin/users/:id
-// @access  Private/Admin
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -126,9 +116,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// @desc    Reactivate user by ID (admin only)
-// @route   PUT /api/admin/users/:id/reactivate
-// @access  Private/Admin
+// @desc    Toggle user active status (admin only)
 export const toggleUser = async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -144,126 +132,224 @@ export const toggleUser = async (req, res) => {
     message: `${
       user.isActive
         ? "User Activated Successfully"
-        : "User deactivated Succcessfully"
+        : "User deactivated Successfully"
     }`,
   });
 };
 
 // @desc    Get dashboard data (admin only)
-// @route   GET /api/admin/dashboard
-// @access  Private/Admin
 export const getDashboardData = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    );
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
 
-    // ===========================
-    // 1. Aggregate User Counts
-    // ===========================
     const userCounts = await User.aggregate([
       {
         $facet: {
-          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
-          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
-          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          today: [
+            { $match: { createdAt: { $gte: today } } },
+            { $count: "count" },
+          ],
+          month: [
+            { $match: { createdAt: { $gte: startOfMonth } } },
+            { $count: "count" },
+          ],
+          year: [
+            { $match: { createdAt: { $gte: startOfYear } } },
+            { $count: "count" },
+          ],
           all: [{ $count: "count" }],
         },
       },
     ]);
 
-    // ===========================
-    // 2. Aggregate Product Counts
-    // ===========================
     const productCounts = await Product.aggregate([
       {
         $facet: {
-          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
-          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
-          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          today: [
+            { $match: { createdAt: { $gte: today } } },
+            { $count: "count" },
+          ],
+          month: [
+            { $match: { createdAt: { $gte: startOfMonth } } },
+            { $count: "count" },
+          ],
+          year: [
+            { $match: { createdAt: { $gte: startOfYear } } },
+            { $count: "count" },
+          ],
           all: [{ $count: "count" }],
         },
       },
     ]);
 
-    // ===========================
-    // 3. Aggregate Category Counts
-    // ===========================
     const categoryCounts = await Category.aggregate([
       {
         $facet: {
-          today: [{ $match: { createdAt: { $gte: today } } }, { $count: "count" }],
-          month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $count: "count" }],
-          year: [{ $match: { createdAt: { $gte: startOfYear } } }, { $count: "count" }],
+          today: [
+            { $match: { createdAt: { $gte: today } } },
+            { $count: "count" },
+          ],
+          month: [
+            { $match: { createdAt: { $gte: startOfMonth } } },
+            { $count: "count" },
+          ],
+          year: [
+            { $match: { createdAt: { $gte: startOfYear } } },
+            { $count: "count" },
+          ],
           all: [{ $count: "count" }],
         },
       },
     ]);
 
-    // ===========================
-    // 4. Aggregate Orders and Revenue
-    // ===========================
-    // const orderStats = await Order.aggregate([
-    //   {
-    //     $facet: {
-    //       today: [
-    //         { $match: { createdAt: { $gte: today } } },
-    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
-    //       ],
-    //       month: [
-    //         { $match: { createdAt: { $gte: startOfMonth } } },
-    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
-    //       ],
-    //       year: [
-    //         { $match: { createdAt: { $gte: startOfYear } } },
-    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
-    //       ],
-    //       all: [
-    //         { $group: { _id: null, count: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
-    //       ],
-    //     },
-    //   },
-    // ]);
+    const orderStats = await Order.aggregate([
+      {
+        $facet: {
+          today: [
+            { $match: { createdAt: { $gte: today } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                revenue: { $sum: "$totalPrice" },
+              },
+            },
+          ],
+          month: [
+            { $match: { createdAt: { $gte: startOfMonth } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                revenue: { $sum: "$totalPrice" },
+              },
+            },
+          ],
+          year: [
+            { $match: { createdAt: { $gte: startOfYear } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                revenue: { $sum: "$totalPrice" },
+              },
+            },
+          ],
+          all: [
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                revenue: { $sum: "$totalPrice" },
+              },
+            },
+          ],
+        },
+      },
+    ]);
 
     const users = userCounts[0];
     const products = productCounts[0];
     const categories = categoryCounts[0];
-    // const orders = orderStats[0];
+    const orders = orderStats[0];
 
-    const formatCount = (data, key) => (data[key][0]?.count || 0);
-    const formatRevenue = (data, key) => (data[key][0]?.revenue || 0);
+    const formatCount = (data, key) => data[key][0]?.count || 0;
+    const formatRevenue = (data, key) => data[key][0]?.revenue || 0;
+
+    // Revenue trend — last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const revenueTrend = await Order.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo }, isPaid: true } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          revenue: { $sum: "$totalPrice" },
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // User growth — last 7 days
+    const userGrowth = await User.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Top products by orders
+    const topProducts = await Order.aggregate([
+      { $unwind: "$orderItems" },
+      {
+        $group: {
+          _id: "$orderItems.product",
+          name: { $first: "$orderItems.name" },
+          totalSold: { $sum: "$orderItems.quantity" },
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$orderItems.price", "$orderItems.quantity"],
+            },
+          },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: 5 },
+    ]);
 
     res.json({
       success: true,
       data: {
         today: {
-          users: formatCount(users, 'today'),
-          products: formatCount(products, 'today'),
-          categories: formatCount(categories, 'today'),
-          // orders: formatCount(orders, 'today'),
-          // revenue: formatRevenue(orders, 'today'),
+          users: formatCount(users, "today"),
+          products: formatCount(products, "today"),
+          categories: formatCount(categories, "today"),
+          orders: formatCount(orders, "today"),
+          revenue: formatRevenue(orders, "today"),
         },
         month: {
-          users: formatCount(users, 'month'),
-          products: formatCount(products, 'month'),
-          categories: formatCount(categories, 'month'),
-          // orders: formatCount(orders, 'month'),
-          // revenue: formatRevenue(orders, 'month'),
+          users: formatCount(users, "month"),
+          products: formatCount(products, "month"),
+          categories: formatCount(categories, "month"),
+          orders: formatCount(orders, "month"),
+          revenue: formatRevenue(orders, "month"),
         },
         year: {
-          users: formatCount(users, 'year'),
-          products: formatCount(products, 'year'),
-          categories: formatCount(categories, 'year'),
-          // orders: formatCount(orders, 'year'),
-          // revenue: formatRevenue(orders, 'year'),
+          users: formatCount(users, "year"),
+          products: formatCount(products, "year"),
+          categories: formatCount(categories, "year"),
+          orders: formatCount(orders, "year"),
+          revenue: formatRevenue(orders, "year"),
         },
         all: {
-          users: formatCount(users, 'all'),
-          products: formatCount(products, 'all'),
-          categories: formatCount(categories, 'all'),
-          // orders: formatCount(orders, 'all'),
-          // revenue: formatRevenue(orders, 'all'),
+          users: formatCount(users, "all"),
+          products: formatCount(products, "all"),
+          categories: formatCount(categories, "all"),
+          orders: formatCount(orders, "all"),
+          revenue: formatRevenue(orders, "all"),
+        },
+        charts: {
+          revenueTrend,
+          userGrowth,
+          topProducts,
         },
       },
     });
@@ -271,7 +357,7 @@ export const getDashboardData = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Internal Server Error',
+      message: error.message || "Internal Server Error",
     });
   }
 };
