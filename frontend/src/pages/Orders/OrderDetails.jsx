@@ -5,6 +5,10 @@ import {
   useCancelOrderItemMutation
 } from '../../features/order/orderApi';
 import {
+  useCreateReturnRequestMutation,
+  useGetMyReturnsQuery
+} from '../../features/returns/returnApiSlice';
+import {
   Box,
   Typography,
   CircularProgress,
@@ -39,9 +43,14 @@ function OrderDetails() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useGetOrderByIdQuery(id);
   const [cancelOrderItem, { isLoading: isCancelling }] = useCancelOrderItemMutation();
+  const [createReturnRequest, { isLoading: isReturning }] = useCreateReturnRequestMutation();
+  const { data: myReturnsData } = useGetMyReturnsQuery();
   const [cancelReason, setCancelReason] = useState('');
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [openReturnDialog, setOpenReturnDialog] = useState(false);
+  const [returnItem, setReturnItem] = useState(null);
+  const [returnReason, setReturnReason] = useState('');
   const order = data?.order;
   const theme = useTheme();
 
@@ -69,6 +78,50 @@ function OrderDetails() {
       toast.error(err?.data?.message || 'Failed to cancel item');
       console.error('Failed to cancel item:', err);
     }
+  };
+
+  const handleOpenReturnDialog = (item) => {
+    setReturnItem(item);
+    setOpenReturnDialog(true);
+  };
+
+  const handleCloseReturnDialog = () => {
+    setOpenReturnDialog(false);
+    setReturnReason('');
+    setReturnItem(null);
+  };
+
+  const handleReturnRequest = async () => {
+    try {
+      await createReturnRequest({
+        orderId: order._id,
+        productId: returnItem.product._id,
+        reason: returnReason,
+      }).unwrap();
+      handleCloseReturnDialog();
+      toast.success('Return request submitted successfully');
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to submit return request');
+    }
+  };
+
+  const hasReturnRequest = (productId) => {
+    return myReturnsData?.returns?.some(
+      (r) => r.order?._id === id && r.product?._id === productId
+    );
+  };
+
+  const getReturnStatus = (productId) => {
+    const ret = myReturnsData?.returns?.find(
+      (r) => r.order?._id === id && r.product?._id === productId
+    );
+    return ret?.status;
+  };
+
+  const isWithinReturnWindow = (deliveredAt) => {
+    if (!deliveredAt) return false;
+    const days = (Date.now() - new Date(deliveredAt).getTime()) / (1000 * 60 * 60 * 24);
+    return days <= 7;
   };
 
   const getOverallStatus = (items) => {
@@ -291,6 +344,29 @@ function OrderDetails() {
                               Cancel Item
                             </Button>
                           )}
+                          {item.isDelivered && !item.isCancelled && (
+                            hasReturnRequest(item.product._id) ? (
+                              <Chip
+                                label={`Return: ${getReturnStatus(item.product._id)}`}
+                                color={
+                                  getReturnStatus(item.product._id) === 'Refunded' ? 'success' :
+                                  getReturnStatus(item.product._id) === 'Rejected' ? 'error' : 'warning'
+                                }
+                                size="small"
+                                sx={{ mt: 1 }}
+                              />
+                            ) : isWithinReturnWindow(item.deliveredAt) ? (
+                              <Button
+                                variant="outlined"
+                                color="warning"
+                                size="small"
+                                sx={{ mt: 1 }}
+                                onClick={() => handleOpenReturnDialog(item)}
+                              >
+                                Request Return
+                              </Button>
+                            ) : null
+                          )}
                         </Box>
                       </ListItem>
                       <Divider component="li" />
@@ -479,6 +555,51 @@ function OrderDetails() {
             disabled={!cancelReason || isCancelling}
           >
             {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Return Request Dialog */}
+      <Dialog open={openReturnDialog} onClose={handleCloseReturnDialog}>
+        <DialogTitle>Request Return</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Request a return for the following item:
+          </Typography>
+          <Typography variant="subtitle1" gutterBottom>
+            {returnItem?.name}
+          </Typography>
+          <Typography component="div">Quantity: {returnItem?.quantity}</Typography>
+          <Typography component="div">
+            Refund Amount: ₹{((returnItem?.price || 0) * (returnItem?.quantity || 0)).toFixed(2)}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Returns must be requested within 7 days of delivery. The seller will review your request.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Reason for return"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            value={returnReason}
+            onChange={(e) => setReturnReason(e.target.value)}
+            required
+            sx={{ mt: 2 }}
+            placeholder="Please describe why you want to return this item..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReturnDialog}>Close</Button>
+          <Button
+            onClick={handleReturnRequest}
+            color="warning"
+            disabled={!returnReason || isReturning}
+          >
+            {isReturning ? 'Submitting...' : 'Submit Return Request'}
           </Button>
         </DialogActions>
       </Dialog>

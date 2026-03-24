@@ -51,5 +51,8 @@ app.use('/api/transactions', transactionRoutes);
 // Import and use the review routes
 import reviewRoutes from './routes/reviewRoutes.js';
 app.use('/api/reviews', reviewRoutes);
+// Import and use the return routes
+import returnRoutes from './routes/returnRoutes.js';
+app.use('/api/returns', returnRoutes);
 
 export default app;
