@@ -120,15 +120,15 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Product variants schema (size, color, etc.) | Backend | [ ] |
-| Variant selection UI on product detail page | Frontend | [ ] |
-| Variant-aware cart & checkout | Frontend + Backend | [ ] |
-| CSV upload endpoint for bulk products | Backend | [ ] |
-| Bulk upload UI with template download | Frontend | [ ] |
-| Recently viewed products (localStorage tracking) | Frontend | [ ] |
-| Recently viewed section on homepage | Frontend | [ ] |
-| Related products API (same category/tags) | Backend | [ ] |
-| Related products section on product detail page | Frontend | [ ] |
+| Product variants schema (size, color, etc.) | Backend | [x] |
+| Variant selection UI on product detail page | Frontend | [x] |
+| Variant-aware cart & checkout | Frontend + Backend | [x] |
+| CSV upload endpoint for bulk products | Backend | [x] |
+| Bulk upload UI with template download | Frontend | [x] |
+| Recently viewed products (localStorage tracking) | Frontend | [x] |
+| Recently viewed section on homepage | Frontend | [x] |
+| Related products API (same category/tags) | Backend | [x] |
+| Related products section on product detail page | Frontend | [x] |
 
 **Depends on:** Nothing
 **Unlocks:** Richer product catalog, better discovery

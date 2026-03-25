@@ -20,6 +20,7 @@ export default function SellerLayout() {
     { to: '/seller/orders', label: 'Manage Orders' },
     { to: '/seller/returns', label: 'Return Requests' },
     { to: '/seller/inventory', label: 'Inventory' },
+    { to: '/seller/bulk-upload', label: 'Bulk Upload' },
     { to: '/seller/categories', label: 'Manage Categories' },
   ]
 
