@@ -5,7 +5,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addItem } from '../../features/cart/cartSlice';
 import { addToWishlist, removeFromWishlist, selectWishlist } from '../../features/wishlist/wishlistSlice';
 import { useAddToWishlistApiMutation, useRemoveFromWishlistApiMutation } from '../../features/wishlist/wishlistApiSlice';
-import { Heart, Loader2, ShoppingCart } from 'lucide-react';
+import { Heart, Loader2, ShoppingCart, MessageCircle } from 'lucide-react';
+import { useGetOrCreateConversationMutation } from '../../features/chat/chatApiSlice';
 import { motion } from 'framer-motion';
 import { Carousel } from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
@@ -52,6 +53,7 @@ function ProductDetail() {
   const { user } = useSelector((state) => state.auth);
   const [addToApi] = useAddToWishlistApiMutation();
   const [removeFromApi] = useRemoveFromWishlistApiMutation();
+  const [createConversation] = useGetOrCreateConversationMutation();
   const [isInWishlist, setIsInWishlist] = useState(false);
 
   useEffect(() => {
@@ -322,7 +324,24 @@ function ProductDetail() {
           {seller && (
             <div>
               <h3 className="text-lg font-semibold mb-2">Sold By</h3>
-              <p className="text-gray-600 dark:text-gray-300">{seller.name}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-gray-600 dark:text-gray-300">{seller.name}</p>
+                {user && user._id !== seller._id && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await createConversation({ recipientId: seller._id, productId: product._id }).unwrap();
+                        navigate("/chat");
+                      } catch (err) {
+                        toast.error("Failed to start chat");
+                      }
+                    }}
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    <MessageCircle size={16} /> Chat
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

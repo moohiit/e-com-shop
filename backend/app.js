@@ -63,5 +63,8 @@ app.use('/api/cart', cartRoutes);
 // Import and use the seller application routes
 import sellerApplicationRoutes from './routes/sellerApplicationRoutes.js';
 app.use('/api/seller-applications', sellerApplicationRoutes);
+// Import and use the chat routes
+import chatRoutes from './routes/chatRoutes.js';
+app.use('/api/chat', chatRoutes);
 
 export default app;
