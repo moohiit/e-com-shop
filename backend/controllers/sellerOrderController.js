@@ -80,7 +80,7 @@ export const getSellerOrderById = async (req, res) => {
               "fullName mobileNumber pincode city state locality flatOrBuilding landmark addressType",
           },
         ],
-        select: "shippingAddress paymentMethod totalPrice user",
+        select: "shippingAddress paymentMethod totalPrice user isPaid paidAt",
       })
       .populate({
         path: "items.product",
