@@ -125,7 +125,7 @@ function SellerOrderDetails() {
     try {
       await cancelItem({
         id: order._id,
-        productId: selectedItem.product,
+        productId: selectedItem.product?._id || selectedItem.product,
         reason: cancelReason
       }).unwrap();
       setSuccessMessage('Item cancelled successfully');
