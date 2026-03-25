@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-24 | Sprint 4 completed
+> Last updated: 2026-03-25 | Sprint 5 completed
 
 ---
 
@@ -30,6 +30,7 @@
 ### Cart & Wishlist
 - [x] Cart Management (Redux + localStorage)
 - [x] Wishlist (Redux + localStorage)
+- [x] Cart backend sync (model, API at `/api/cart`, syncs on login)
 
 ### Checkout & Payments
 - [x] Multi-step Checkout (Address > Payment > Review)
@@ -77,6 +78,19 @@
 - [x] Admin Dashboard: stat cards with time filters (today/month/year/all), revenue+orders bar chart, user growth line chart, top products table
 - [x] Backend aggregation pipelines for revenue trends, user growth, top products
 
+### Inventory & Wishlist Sync (Sprint 5)
+- [x] `lowStockThreshold` field on Product model with `isLowStock` virtual
+- [x] Auto-hide out-of-stock products from public product listings
+- [x] Low-stock alert section on seller dashboard
+- [x] Inventory management page for sellers (low-stock tab + all products tab)
+- [x] Bulk stock update API and UI (edit multiple products, save at once)
+- [x] Low-stock and bulk-stock API endpoints (`/product/low-stock`, `/product/bulk-stock`)
+- [x] Wishlist backend model and API (`/api/wishlist` — add, remove, list, clear)
+- [x] Frontend wishlist syncs with backend when logged in, falls back to localStorage for guests
+- [x] ProductDetail and Wishlist page updated for backend sync
+- [x] Cart backend model and API (`/api/cart` — get, add, update, remove, clear, sync)
+- [x] Frontend cart syncs with backend on login, localStorage fallback for guests
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -85,30 +99,25 @@
 
 ---
 
-## Partially Done
-
-| # | Feature | What's Missing |
-|---|---------|----------------|
-| 1 | Wishlist Backend Sync | Currently local-only (localStorage) - no backend persistence |
-
----
-
 ## Remaining Features (To Implement)
 
-### High Priority
+### Completed High Priority
 
-- [x] ~~**1. Product Reviews & Ratings UI**~~ — Completed in Sprint 1
-- [x] ~~**2. Payment Refunds**~~ — Completed in Sprint 3
-- [x] ~~**3. Return/Exchange (RMA) System**~~ — Completed in Sprint 3
-- [x] ~~**4. Order Status Email Notifications**~~ — Completed in Sprint 2
+- [x] ~~**1. Product Reviews & Ratings UI**~~ — Sprint 1
+- [x] ~~**2. Payment Refunds**~~ — Sprint 3
+- [x] ~~**3. Return/Exchange (RMA) System**~~ — Sprint 3
+- [x] ~~**4. Order Status Email Notifications**~~ — Sprint 2
 
-### Medium Priority
+### Completed Medium Priority
 
-- [x] ~~**6. Seller Dashboard Analytics**~~ — Completed in Sprint 4
-- [x] ~~**7. Admin Analytics & Reports**~~ — Completed in Sprint 4
-- [ ] **8. Inventory Management** - Low-stock alerts, bulk stock updates, auto-hide out-of-stock products
-- [ ] **9. Wishlist Backend Sync** - Persist wishlist in database, sync across devices and sessions
-- [x] ~~**10. COD (Cash on Delivery)**~~ — Completed in Sprint 2
+- [x] ~~**6. Seller Dashboard Analytics**~~ — Sprint 4
+- [x] ~~**7. Admin Analytics & Reports**~~ — Sprint 4
+- [x] ~~**8. Inventory Management**~~ — Sprint 5
+- [x] ~~**9. Wishlist Backend Sync**~~ — Sprint 5
+- [x] ~~**10. COD (Cash on Delivery)**~~ — Sprint 2
+
+### Medium Priority (Remaining)
+
 - [ ] **11. Order Invoice/Receipt PDF** - Generate and download PDF invoice for each order
 
 ### Lower Priority
@@ -128,10 +137,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 27 features |
-| Partially Done   | 1 feature   |
-| Remaining        | 11 features |
-| **Overall**      | **~82% complete** |
+| Completed        | 30 features |
+| Partially Done   | 0 features  |
+| Remaining        | 9 features  |
+| **Overall**      | **~87% complete** |
 
 ---
 

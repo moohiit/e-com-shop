@@ -54,5 +54,11 @@ app.use('/api/reviews', reviewRoutes);
 // Import and use the return routes
 import returnRoutes from './routes/returnRoutes.js';
 app.use('/api/returns', returnRoutes);
+// Import and use the wishlist routes
+import wishlistRoutes from './routes/wishlistRoutes.js';
+app.use('/api/wishlist', wishlistRoutes);
+// Import and use the cart routes
+import cartRoutes from './routes/cartRoutes.js';
+app.use('/api/cart', cartRoutes);
 
 export default app;

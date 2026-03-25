@@ -1,30 +1,32 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const defaultState = {
+  items: [],
+  totalQuantity: 0,
+  totalAmount: 0,
+  shippingAddress: null,
+  paymentMethod: null,
+};
+
 const loadCartFromStorage = () => {
   try {
     const stored = localStorage.getItem("cart");
-    return stored
-      ? JSON.parse(stored)
-      : {
-          items: [],
-          totalQuantity: 0,
-          totalAmount: 0,
-          shippingAddress: null, // Only the selected shipping address
-          paymentMethod: null,
-        };
+    return stored ? JSON.parse(stored) : { ...defaultState };
   } catch {
-    return {
-      items: [],
-      totalQuantity: 0,
-      totalAmount: 0,
-      shippingAddress: null,
-      paymentMethod: null,
-    };
+    return { ...defaultState };
   }
 };
 
 const saveCartToStorage = (state) => {
   localStorage.setItem("cart", JSON.stringify(state));
+};
+
+const recalcTotals = (state) => {
+  state.totalQuantity = state.items.reduce((sum, i) => sum + i.quantity, 0);
+  state.totalAmount = state.items.reduce(
+    (sum, i) => sum + (i.finalPrice || i.basePrice || 0) * i.quantity,
+    0
+  );
 };
 
 const cartSlice = createSlice({
@@ -40,8 +42,7 @@ const cartSlice = createSlice({
       } else {
         state.items.push({ ...action.payload, quantity: 1 });
       }
-      state.totalQuantity += 1;
-      state.totalAmount += (action.payload.finalPrice);
+      recalcTotals(state);
       saveCartToStorage(state);
     },
     removeItem: (state, action) => {
@@ -56,24 +57,16 @@ const cartSlice = createSlice({
         } else {
           existingItem.quantity -= 1;
         }
-        state.totalQuantity -= 1;
-        state.totalAmount -= (existingItem.finalPrice);
+        recalcTotals(state);
         saveCartToStorage(state);
       }
     },
     deleteItem: (state, action) => {
-      const itemToRemove = state.items.find(
-        (item) => item._id === action.payload
-      );
-      if (itemToRemove) {
-        state.items = state.items.filter((item) => item._id !== action.payload);
-        state.totalQuantity -= itemToRemove.quantity;
-        state.totalAmount -= (itemToRemove.finalPrice) * itemToRemove.quantity;
-        saveCartToStorage(state);
-      }
+      state.items = state.items.filter((item) => item._id !== action.payload);
+      recalcTotals(state);
+      saveCartToStorage(state);
     },
     saveShippingAddress: (state, action) => {
-      // Only save the selected shipping address (fetched from the API)
       state.shippingAddress = action.payload;
       saveCartToStorage(state);
     },
@@ -89,6 +82,19 @@ const cartSlice = createSlice({
       state.paymentMethod = null;
       saveCartToStorage(state);
     },
+    setCartFromServer: (state, action) => {
+      const serverItems = action.payload || [];
+      state.items = serverItems.map((item) => {
+        const product = item.product || item;
+        return {
+          ...product,
+          _id: product._id,
+          quantity: item.quantity || 1,
+        };
+      });
+      recalcTotals(state);
+      saveCartToStorage(state);
+    },
   },
 });
 
@@ -99,6 +105,7 @@ export const {
   saveShippingAddress,
   savePaymentMethod,
   clearCart,
+  setCartFromServer,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

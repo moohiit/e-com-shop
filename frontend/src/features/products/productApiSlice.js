@@ -77,6 +77,20 @@ export const productApiSlice = apiSlice.injectEndpoints({
       query: (categoryId) => `/product/category/${categoryId}`,
       providesTags: ['Product'],
     }),
+
+    getLowStockProducts: builder.query({
+      query: () => '/product/low-stock',
+      providesTags: ['Product'],
+    }),
+
+    bulkUpdateStock: builder.mutation({
+      query: (updates) => ({
+        url: '/product/bulk-stock',
+        method: 'PUT',
+        body: { updates },
+      }),
+      invalidatesTags: ['Product'],
+    }),
   }),
 })
 
@@ -91,4 +105,6 @@ export const {
   useToggleProductMutation,
   useGetProductCountQuery,
   useGetProductsByCategoryQuery,
+  useGetLowStockProductsQuery,
+  useBulkUpdateStockMutation,
 } = productApiSlice

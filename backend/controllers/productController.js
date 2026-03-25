@@ -189,7 +189,7 @@ export const listProducts = async (req, res, baseQuery = {}) => {
 
 /* ---------- Exported listings ---------- */
 export const getAllProducts = (req, res) =>
-  listProducts(req, res, { isActive: true });
+  listProducts(req, res, { isActive: true, stock: { $gt: 0 } });
 export const getAllProductsAdmin = (req, res) => listProducts(req, res);
 export const getAllProductsBySeller = (req, res) =>
   listProducts(req, res, { seller: req.user._id });
@@ -246,6 +246,7 @@ export const updateProduct = async (req, res) => {
       "discountPercentage",
       "taxPercentage",
       "stock",
+      "lowStockThreshold",
       "images",
       "categories",
     ];
@@ -362,6 +363,72 @@ export const getProductsByCategory = async (req, res) => {
     })
       .populate(populateFields)
       .sort({ createdAt: -1 });
+
+    res.json({ success: true, products });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------- Bulk Stock Update (Seller) ---------- */
+export const bulkUpdateStock = async (req, res) => {
+  try {
+    const { updates } = req.body; // [{ productId, stock }]
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No updates provided." });
+    }
+
+    const results = [];
+    for (const { productId, stock } of updates) {
+      if (!isValidObjectId(productId)) {
+        results.push({ productId, success: false, message: "Invalid ID" });
+        continue;
+      }
+
+      const product = await Product.findById(productId);
+      if (!product) {
+        results.push({ productId, success: false, message: "Not found" });
+        continue;
+      }
+
+      if (
+        product.seller.toString() !== req.user._id.toString() &&
+        req.user.role !== "admin"
+      ) {
+        results.push({ productId, success: false, message: "Not authorized" });
+        continue;
+      }
+
+      product.stock = Math.max(0, Number(stock));
+      await product.save();
+      results.push({ productId, success: true, newStock: product.stock });
+    }
+
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------- Low Stock Products (Seller/Admin) ---------- */
+export const getLowStockProducts = async (req, res) => {
+  try {
+    const baseQuery = {};
+    if (req.user.role === "seller") {
+      baseQuery.seller = req.user._id;
+    }
+
+    const products = await Product.find({
+      ...baseQuery,
+      isActive: true,
+      $expr: { $lte: ["$stock", "$lowStockThreshold"] },
+    })
+      .populate(populateFields)
+      .sort({ stock: 1 })
+      .limit(50);
 
     res.json({ success: true, products });
   } catch (err) {
