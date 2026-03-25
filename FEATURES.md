@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-25 | Sprint 6 completed
+> Last updated: 2026-03-25 | Sprint 7 completed
 
 ---
 
@@ -101,6 +101,15 @@
 - [x] Auto-upgrade user role to seller on approval
 - [x] Email notification on application approval/rejection
 
+### Product Variants, Bulk Upload & Discovery (Sprint 7)
+- [x] Product variants schema (name/options with priceAdjustment and stock per option)
+- [x] Variant selection UI on product detail page with price adjustment display
+- [x] Variant-aware add-to-cart (selectedVariants passed to cart)
+- [x] CSV bulk upload endpoint with validation and category name resolution
+- [x] Bulk upload UI with template download, results display, error reporting
+- [x] Recently viewed products tracked in localStorage, shown on homepage
+- [x] Related products API (same category) + section on product detail page
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -131,11 +140,14 @@
 - [x] ~~**11. Order Invoice/Receipt PDF**~~ — Sprint 6
 - [x] ~~**13. Seller Registration & Verification**~~ — Sprint 6
 
-### Lower Priority
-- [ ] **14. Product Variants** - Size, color, and other selectable options per product
-- [ ] **15. Bulk Product Upload (CSV)** - Sellers upload products via CSV/Excel file
-- [ ] **16. Recently Viewed Products** - Track and display recently viewed items on homepage/sidebar
-- [ ] **17. Related/Recommended Products** - Show similar products on product detail page (by category/tags)
+### Completed Lower Priority
+
+- [x] ~~**14. Product Variants**~~ — Sprint 7
+- [x] ~~**15. Bulk Product Upload (CSV)**~~ — Sprint 7
+- [x] ~~**16. Recently Viewed Products**~~ — Sprint 7
+- [x] ~~**17. Related/Recommended Products**~~ — Sprint 7
+
+### Remaining
 - [ ] **18. Live Chat / Customer Support** - Chat widget for buyer-seller or buyer-support communication
 - [ ] **19. Unit & E2E Tests** - Jest for backend, React Testing Library + Playwright/Cypress for frontend
 - [ ] **20. Deployment Setup** - Docker, CI/CD pipeline, production environment configuration
@@ -146,10 +158,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 32 features |
+| Completed        | 36 features |
 | Partially Done   | 0 features  |
-| Remaining        | 7 features  |
-| **Overall**      | **~90% complete** |
+| Remaining        | 3 features  |
+| **Overall**      | **~95% complete** |
 
 ---
 

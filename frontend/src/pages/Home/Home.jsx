@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { FiShoppingBag, FiTruck, FiShield, FiHeadphones, FiStar, FiTrendingUp } from 'react-icons/fi';
+import RecentlyViewed from '../../components/products/RecentlyViewed';
 
 function Home() {
   const user = useSelector((state) => state.auth.user);
@@ -240,6 +241,9 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* Recently Viewed */}
+      <RecentlyViewed />
 
       {/* Testimonials */}
       <section className="px-6 py-16 max-w-6xl mx-auto">

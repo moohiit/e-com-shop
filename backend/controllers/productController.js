@@ -52,6 +52,7 @@ export const createProduct = async (req, res) => {
       stock,
       images = [],
       categories,
+      variants = [],
     } = req.body;
 
     if (!name || !description || !basePrice || !stock || !categories) {
@@ -95,6 +96,7 @@ export const createProduct = async (req, res) => {
       stock,
       images,
       categories,
+      variants,
       seller: req.user.id,
     });
 
@@ -249,6 +251,7 @@ export const updateProduct = async (req, res) => {
       "lowStockThreshold",
       "images",
       "categories",
+      "variants",
     ];
     fields.forEach((f) => {
       if (req.body[f] !== undefined) product[f] = req.body[f];
@@ -408,6 +411,30 @@ export const bulkUpdateStock = async (req, res) => {
     }
 
     res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------- Related Products ---------- */
+export const getRelatedProducts = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found." });
+    }
+
+    const related = await Product.find({
+      _id: { $ne: product._id },
+      isActive: true,
+      stock: { $gt: 0 },
+      categories: { $in: product.categories },
+    })
+      .populate(populateFields)
+      .sort({ ratingsAverage: -1 })
+      .limit(8);
+
+    res.json({ success: true, products: related });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

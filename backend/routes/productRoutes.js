@@ -1,4 +1,6 @@
 import express from 'express';
+import multer from 'multer';
+import { bulkUploadProducts, downloadTemplate } from '../controllers/bulkUploadController.js';
 import {
   createProduct,
   getAllProducts,
@@ -12,6 +14,7 @@ import {
   getAllProductsBySeller,
   bulkUpdateStock,
   getLowStockProducts,
+  getRelatedProducts,
 } from '../controllers/productController.js';
 
 import { isAdmin, isSeller, isSellerOrAdmin, protect } from '../middleware/authMiddleware.js';
@@ -30,6 +33,11 @@ router.get('/admin', protect, isAdmin, getAllProductsAdmin);
 // Get all products for seller (with search, filter, pagination, sorting)
 router.get('/seller', protect, isSeller, getAllProductsBySeller);
 
+// CSV bulk upload
+const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+router.post('/bulk-upload', protect, isSeller, csvUpload.single('csv'), bulkUploadProducts);
+router.get('/bulk-upload/template', protect, isSeller, downloadTemplate);
+
 // Low stock products (seller/admin)
 router.get('/low-stock', protect, isSellerOrAdmin, getLowStockProducts);
 
@@ -38,6 +46,9 @@ router.put('/bulk-stock', protect, isSeller, bulkUpdateStock);
 
 // Get product count
 router.get('/count', getProductCount);
+
+// Get related products
+router.get('/:id/related', getRelatedProducts);
 
 // Get a single product by ID
 router.get('/:id', getProductById);
