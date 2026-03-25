@@ -9,8 +9,16 @@ import {
   removeItem,
   deleteItem,
   clearCart,
+  setCartFromServer,
 } from '../../features/cart/cartSlice';
 import { addToWishlist } from '../../features/wishlist/wishlistSlice';
+import { useAddToWishlistApiMutation } from '../../features/wishlist/wishlistApiSlice';
+import {
+  useGetCartQuery,
+  useSyncCartMutation,
+  useRemoveFromCartApiMutation,
+  useClearCartApiMutation,
+} from '../../features/cart/cartApiSlice';
 import { useGetProductByIdQuery } from '../../features/products/productApiSlice';
 import { toast } from 'react-hot-toast';
 import AccessDenied from '../../components/common/AccessDenied';
@@ -24,8 +32,27 @@ function Cart() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const { data: serverCart } = useGetCartQuery(undefined, { skip: !user });
+  const [syncCart] = useSyncCartMutation();
+  const [removeFromCartApi] = useRemoveFromCartApiMutation();
+  const [clearCartApi] = useClearCartApiMutation();
+  const [addToWishlistApi] = useAddToWishlistApiMutation();
   const [outOfStockItems, setOutOfStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sync cart with backend on login
+  useEffect(() => {
+    if (user && serverCart?.items) {
+      if (cartItems.length > 0 && serverCart.items.length === 0) {
+        // Push local cart to server
+        const items = cartItems.map((i) => ({ product: i._id, quantity: i.quantity }));
+        syncCart(items).catch(() => {});
+      } else if (serverCart.items.length > 0) {
+        dispatch(setCartFromServer(serverCart.items));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverCart]);
 
   if (user?.role === 'seller' || user?.role === 'admin') {
     return <AccessDenied />;
@@ -87,17 +114,23 @@ function Cart() {
 
   const handleRemove = (id) => {
     dispatch(deleteItem(id));
+    if (user) removeFromCartApi(id).catch(() => {});
     toast.success('Item removed from cart');
   };
 
   const handleMoveToWishlist = (item) => {
     dispatch(deleteItem(item._id));
     dispatch(addToWishlist(item));
+    if (user) {
+      removeFromCartApi(item._id).catch(() => {});
+      addToWishlistApi(item._id).catch(() => {});
+    }
     toast.success('Item moved to wishlist');
   };
 
   const handleClearCart = () => {
     dispatch(clearCart());
+    if (user) clearCartApi().catch(() => {});
     toast.success('Cart cleared');
   };
 

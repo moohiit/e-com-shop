@@ -4,6 +4,7 @@ import { useGetProductByIdQuery } from '../../features/products/productApiSlice'
 import { useDispatch, useSelector } from 'react-redux';
 import { addItem } from '../../features/cart/cartSlice';
 import { addToWishlist, removeFromWishlist, selectWishlist } from '../../features/wishlist/wishlistSlice';
+import { useAddToWishlistApiMutation, useRemoveFromWishlistApiMutation } from '../../features/wishlist/wishlistApiSlice';
 import { Heart, Loader2, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Carousel } from 'react-responsive-carousel';
@@ -26,6 +27,9 @@ function ProductDetail() {
     isError
   } = useGetProductByIdQuery(id);
 
+  const { user } = useSelector((state) => state.auth);
+  const [addToApi] = useAddToWishlistApiMutation();
+  const [removeFromApi] = useRemoveFromWishlistApiMutation();
   const [isInWishlist, setIsInWishlist] = useState(false);
 
   useEffect(() => {
@@ -54,12 +58,14 @@ function ProductDetail() {
     navigate('/cart');
   };
 
-  const toggleWishlist = () => {
+  const toggleWishlist = async () => {
     if (isInWishlist) {
       dispatch(removeFromWishlist(productData.product._id));
+      if (user) removeFromApi(productData.product._id).catch(() => {});
       toast.success('Removed from wishlist');
     } else {
       dispatch(addToWishlist(productData.product));
+      if (user) addToApi(productData.product._id).catch(() => {});
       toast.success('Added to wishlist');
     }
   };

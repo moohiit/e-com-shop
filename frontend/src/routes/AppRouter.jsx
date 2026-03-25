@@ -42,6 +42,7 @@ const OrderDetails = lazy(() => import("../pages/Orders/OrderDetails"));
 const SellerOrderDetails = lazy(() => import("../pages/Seller/SellerOrderDetails"));
 const SellerReturns = lazy(() => import("../pages/Seller/SellerReturns"));
 const ManageAddresses = lazy(() => import("../pages/Address/ManageAddresses"));
+const InventoryManagement = lazy(() => import("../pages/Seller/InventoryManagement"));
 
 export function AppRouter() {
   return (
@@ -92,6 +93,7 @@ export function AppRouter() {
             <Route path="orders" element={<ManageOrders />} />
             <Route path="categories" element={<ManageCategories />} />
             <Route path="returns" element={<SellerReturns />} />
+            <Route path="inventory" element={<InventoryManagement />} />
             <Route path="order/:id" element={<SellerOrderDetails />} />
 
           </Route>
