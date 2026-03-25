@@ -9,6 +9,10 @@ const loadWishlistFromStorage = () => {
   }
 };
 
+const saveToStorage = (items) => {
+  localStorage.setItem("wishlist", JSON.stringify(items));
+};
+
 const wishlistSlice = createSlice({
   name: "wishlist",
   initialState: loadWishlistFromStorage(),
@@ -16,31 +20,39 @@ const wishlistSlice = createSlice({
     addToWishlist: (state, action) => {
       if (!state.some((item) => item._id === action.payload._id)) {
         state.push(action.payload);
-        localStorage.setItem("wishlist", JSON.stringify(state));
+        saveToStorage(state);
       }
     },
     removeFromWishlist: (state, action) => {
       const newState = state.filter((item) => item._id !== action.payload);
-      localStorage.setItem("wishlist", JSON.stringify(newState));
+      saveToStorage(newState);
       return newState;
     },
     moveToCart: (state, action) => {
-      // This would dispatch both removeFromWishlist and addToCart actions
       const newState = state.filter((item) => item._id !== action.payload._id);
-      localStorage.setItem("wishlist", JSON.stringify(newState));
+      saveToStorage(newState);
       return newState;
     },
     clearWishlist: () => {
       localStorage.removeItem("wishlist");
       return [];
     },
+    setWishlistFromServer: (_state, action) => {
+      const items = action.payload || [];
+      saveToStorage(items);
+      return items;
+    },
   },
 });
 
-export const { addToWishlist, removeFromWishlist, moveToCart, clearWishlist } =
-  wishlistSlice.actions;
+export const {
+  addToWishlist,
+  removeFromWishlist,
+  moveToCart,
+  clearWishlist,
+  setWishlistFromServer,
+} = wishlistSlice.actions;
 
-// Selectors
 export const selectWishlist = (state) => state.wishlist;
 export const selectWishlistItems = (state) => state.wishlist;
 
