@@ -86,6 +86,20 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // --- Variants (optional) ---
+    variants: [
+      {
+        name: { type: String, required: true }, // e.g. "Size", "Color"
+        options: [
+          {
+            value: { type: String, required: true }, // e.g. "XL", "Red"
+            priceAdjustment: { type: Number, default: 0 }, // +/- from basePrice
+            stock: { type: Number, default: 0, min: 0 },
+          },
+        ],
+      },
+    ],
+
     isActive: {
       type: Boolean,
       default: true,

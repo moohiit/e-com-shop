@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useGetProductByIdQuery } from '../../features/products/productApiSlice';
+import { useGetProductByIdQuery, useGetRelatedProductsQuery } from '../../features/products/productApiSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { addItem } from '../../features/cart/cartSlice';
 import { addToWishlist, removeFromWishlist, selectWishlist } from '../../features/wishlist/wishlistSlice';
@@ -12,13 +12,33 @@ import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import Rating from '../../components/common/Rating';
 import ReviewForm from '../../components/reviews/ReviewForm';
 import ReviewList from '../../components/reviews/ReviewList';
+import { Link } from 'react-router-dom';
 import toast from "react-hot-toast";
+
+// Recently viewed helper
+const addToRecentlyViewed = (product) => {
+  try {
+    const stored = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+    const filtered = stored.filter((p) => p._id !== product._id);
+    filtered.unshift({
+      _id: product._id,
+      name: product.name,
+      basePrice: product.basePrice,
+      finalPrice: product.finalPrice,
+      discountPercentage: product.discountPercentage,
+      images: product.images?.slice(0, 1),
+      ratingsAverage: product.ratingsAverage,
+    });
+    localStorage.setItem("recentlyViewed", JSON.stringify(filtered.slice(0, 12)));
+  } catch {}
+};
 
 function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariants, setSelectedVariants] = useState({});
   const wishlist = useSelector(selectWishlist);
 
   const {
@@ -26,6 +46,8 @@ function ProductDetail() {
     isLoading,
     isError
   } = useGetProductByIdQuery(id);
+
+  const { data: relatedData } = useGetRelatedProductsQuery(id, { skip: !id });
 
   const { user } = useSelector((state) => state.auth);
   const [addToApi] = useAddToWishlistApiMutation();
@@ -38,16 +60,47 @@ function ProductDetail() {
     }
   }, [productData, wishlist]);
 
+  // Track recently viewed
+  useEffect(() => {
+    if (productData?.product) {
+      addToRecentlyViewed(productData.product);
+      setSelectedVariants({});
+      setQuantity(1);
+    }
+  }, [productData?.product?._id]);
+
+  // Calculate variant price adjustment
+  const getVariantPriceAdjustment = () => {
+    let adjustment = 0;
+    const product = productData?.product;
+    if (product?.variants) {
+      for (const variant of product.variants) {
+        const selectedValue = selectedVariants[variant.name];
+        if (selectedValue) {
+          const option = variant.options.find((o) => o.value === selectedValue);
+          if (option) adjustment += option.priceAdjustment || 0;
+        }
+      }
+    }
+    return adjustment;
+  };
+
   const handleAddToCart = () => {
     if (productData?.product?.stock <= 0) {
       toast.error('Product is out of stock');
       return;
     }
 
+    const product = productData.product;
+    const priceAdj = getVariantPriceAdjustment();
+    const adjustedPrice = (product.finalPrice || product.basePrice) + priceAdj;
+
     dispatch(addItem({
-      ...productData.product,
+      ...product,
       quantity,
-      price: productData.product.finalPrice || productData.product.basePrice
+      price: adjustedPrice,
+      finalPrice: adjustedPrice,
+      selectedVariants: Object.keys(selectedVariants).length > 0 ? { ...selectedVariants } : undefined,
     }));
 
     toast.success('Added to cart successfully');
@@ -192,6 +245,48 @@ function ProductDetail() {
             )}
           </div>
 
+          {/* Variant Selection */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="space-y-4">
+              {product.variants.map((variant) => (
+                <div key={variant.name}>
+                  <h3 className="text-sm font-semibold mb-2">{variant.name}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {variant.options.map((option) => {
+                      const isSelected = selectedVariants[variant.name] === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() =>
+                            setSelectedVariants((prev) => ({
+                              ...prev,
+                              [variant.name]: isSelected ? undefined : option.value,
+                            }))
+                          }
+                          className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                            isSelected
+                              ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "border-gray-300 dark:border-gray-600 hover:border-gray-400"
+                          } ${option.stock === 0 ? "opacity-40 line-through" : ""}`}
+                          disabled={option.stock === 0}
+                        >
+                          {option.value}
+                          {option.priceAdjustment > 0 && ` (+₹${option.priceAdjustment})`}
+                          {option.priceAdjustment < 0 && ` (-₹${Math.abs(option.priceAdjustment)})`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {getVariantPriceAdjustment() !== 0 && (
+                <p className="text-sm text-blue-600">
+                  Adjusted price: ₹{((product.finalPrice || product.basePrice) + getVariantPriceAdjustment()).toFixed(2)}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Product Description */}
           <div>
             <h3 className="text-lg font-semibold mb-2">Description</h3>
@@ -283,6 +378,40 @@ function ProductDetail() {
         <ReviewForm productId={id} />
         <ReviewList productId={id} />
       </div>
+
+      {/* Related Products */}
+      {relatedData?.products?.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {relatedData.products.map((p) => (
+              <Link
+                key={p._id}
+                to={`/product/${p._id}`}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden"
+              >
+                <img
+                  src={p.images?.[0]?.imageUrl || "/placeholder-image.jpg"}
+                  alt={p.name}
+                  className="w-full h-40 object-cover"
+                />
+                <div className="p-3">
+                  <h3 className="font-medium text-sm truncate">{p.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="font-bold text-sm">₹{p.finalPrice?.toFixed(2) || p.basePrice?.toFixed(2)}</span>
+                    {p.discountPercentage > 0 && (
+                      <span className="text-xs text-red-500">{Math.round(p.discountPercentage)}% off</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Rating value={p.ratingsAverage || 0} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

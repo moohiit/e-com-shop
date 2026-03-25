@@ -43,6 +43,7 @@ const SellerOrderDetails = lazy(() => import("../pages/Seller/SellerOrderDetails
 const SellerReturns = lazy(() => import("../pages/Seller/SellerReturns"));
 const ManageAddresses = lazy(() => import("../pages/Address/ManageAddresses"));
 const InventoryManagement = lazy(() => import("../pages/Seller/InventoryManagement"));
+const BulkUpload = lazy(() => import("../pages/Seller/BulkUpload"));
 const ApplyAsSeller = lazy(() => import("../pages/SellerApplication/ApplyAsSeller"));
 const SellerApplications = lazy(() => import("../pages/Admin/SellerApplications"));
 
@@ -97,6 +98,7 @@ export function AppRouter() {
             <Route path="categories" element={<ManageCategories />} />
             <Route path="returns" element={<SellerReturns />} />
             <Route path="inventory" element={<InventoryManagement />} />
+            <Route path="bulk-upload" element={<BulkUpload />} />
             <Route path="order/:id" element={<SellerOrderDetails />} />
 
           </Route>
