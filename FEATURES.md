@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-25 | Sprint 5 completed
+> Last updated: 2026-03-25 | Sprint 6 completed
 
 ---
 
@@ -91,6 +91,16 @@
 - [x] Cart backend model and API (`/api/cart` — get, add, update, remove, clear, sync)
 - [x] Frontend cart syncs with backend on login, localStorage fallback for guests
 
+### Invoice PDF & Seller Registration (Sprint 6)
+- [x] Order invoice PDF generation with pdfkit (items, prices, taxes, address, branded layout)
+- [x] Download invoice button on order details page (for paid orders)
+- [x] Seller application model (business name, type, address, phone, GST, status)
+- [x] Seller application API (submit, view my apps, admin list/review)
+- [x] Public seller application page at `/sell-on-shopease`
+- [x] Admin seller application review page with approve/reject + notes
+- [x] Auto-upgrade user role to seller on approval
+- [x] Email notification on application approval/rejection
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -116,13 +126,12 @@
 - [x] ~~**9. Wishlist Backend Sync**~~ — Sprint 5
 - [x] ~~**10. COD (Cash on Delivery)**~~ — Sprint 2
 
-### Medium Priority (Remaining)
+### Completed Medium/Lower Priority
 
-- [ ] **11. Order Invoice/Receipt PDF** - Generate and download PDF invoice for each order
+- [x] ~~**11. Order Invoice/Receipt PDF**~~ — Sprint 6
+- [x] ~~**13. Seller Registration & Verification**~~ — Sprint 6
 
 ### Lower Priority
-
-- [ ] **13. Seller Registration & Verification** - Application flow for becoming a seller, admin approval process
 - [ ] **14. Product Variants** - Size, color, and other selectable options per product
 - [ ] **15. Bulk Product Upload (CSV)** - Sellers upload products via CSV/Excel file
 - [ ] **16. Recently Viewed Products** - Track and display recently viewed items on homepage/sidebar
@@ -137,10 +146,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 30 features |
+| Completed        | 32 features |
 | Partially Done   | 0 features  |
-| Remaining        | 9 features  |
-| **Overall**      | **~87% complete** |
+| Remaining        | 7 features  |
+| **Overall**      | **~90% complete** |
 
 ---
 

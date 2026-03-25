@@ -102,13 +102,13 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Install PDF library (pdfkit or jspdf) | Setup | [ ] |
-| Generate order invoice PDF (items, prices, taxes, address) | Backend | [ ] |
-| Download invoice button on order details page | Frontend | [ ] |
-| Seller application form (public page) | Frontend | [ ] |
-| Seller application model & API | Backend | [ ] |
-| Admin: review & approve/reject seller applications | Frontend + Backend | [ ] |
-| Email notification on application status change | Backend | [ ] |
+| Install PDF library (pdfkit or jspdf) | Setup | [x] |
+| Generate order invoice PDF (items, prices, taxes, address) | Backend | [x] |
+| Download invoice button on order details page | Frontend | [x] |
+| Seller application form (public page) | Frontend | [x] |
+| Seller application model & API | Backend | [x] |
+| Admin: review & approve/reject seller applications | Frontend + Backend | [x] |
+| Email notification on application status change | Backend | [x] |
 
 **Depends on:** Sprint 2 (email templates reused)
 **Unlocks:** Downloadable receipts, marketplace growth

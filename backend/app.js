@@ -60,5 +60,8 @@ app.use('/api/wishlist', wishlistRoutes);
 // Import and use the cart routes
 import cartRoutes from './routes/cartRoutes.js';
 app.use('/api/cart', cartRoutes);
+// Import and use the seller application routes
+import sellerApplicationRoutes from './routes/sellerApplicationRoutes.js';
+app.use('/api/seller-applications', sellerApplicationRoutes);
 
 export default app;
