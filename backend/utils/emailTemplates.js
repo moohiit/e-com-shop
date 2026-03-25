@@ -165,3 +165,29 @@ export const orderCancelledEmail = (order, userName, itemName, reason) => {
     html: baseTemplate("Item Cancelled", content),
   };
 };
+
+// ─── Seller Application Status ───
+export const sellerApplicationStatusEmail = (userName, status, businessName, adminNote) => {
+  const isApproved = status === "Approved";
+  const statusBg = isApproved ? "#d1fae5" : "#fee2e2";
+  const statusColor = isApproved ? "#065f46" : "#991b1b";
+
+  const content = `
+    <p>Hi ${userName},</p>
+    <p>Your seller application for <strong>${businessName}</strong> has been reviewed.</p>
+    <p style="background-color:${statusBg}; color:${statusColor}; padding:12px; border-radius:6px; font-weight:600;">
+      Status: ${status}
+    </p>
+    ${adminNote ? `<p><strong>Admin Note:</strong> ${adminNote}</p>` : ""}
+    ${isApproved
+      ? `<p>Congratulations! Your account has been upgraded to <strong>Seller</strong>. You can now log in and start listing products.</p>
+         <a href="${process.env.CLIENT_URL || "http://localhost:5173"}/auth/login" class="btn">Go to Seller Dashboard</a>`
+      : `<p>Unfortunately, your application was not approved at this time. You may submit a new application with updated information.</p>`
+    }
+  `;
+
+  return {
+    subject: `Seller Application ${status} — ${businessName}`,
+    html: baseTemplate(`Application ${status}`, content),
+  };
+};

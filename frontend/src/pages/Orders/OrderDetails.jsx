@@ -37,6 +37,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { toast } from 'react-hot-toast';
+import { Download } from 'lucide-react';
 
 function OrderDetails() {
   const { id } = useParams();
@@ -116,6 +117,26 @@ function OrderDetails() {
       (r) => r.order?._id === id && r.product?._id === productId
     );
     return ret?.status;
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/orders/${id}/invoice`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to download invoice');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${id}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Invoice downloaded');
+    } catch (err) {
+      toast.error(err.message || 'Failed to download invoice');
+    }
   };
 
   const isWithinReturnWindow = (deliveredAt) => {
@@ -504,7 +525,17 @@ function OrderDetails() {
         </Grid>
       </Grid>
 
-      <Box mt={3} display="flex" justifyContent="flex-end">
+      <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
+        {order.isPaid && (
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleDownloadInvoice}
+            startIcon={<Download size={16} />}
+          >
+            Download Invoice
+          </Button>
+        )}
         <Button
           component={Link}
           to="/my-orders"

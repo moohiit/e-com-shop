@@ -43,6 +43,8 @@ const SellerOrderDetails = lazy(() => import("../pages/Seller/SellerOrderDetails
 const SellerReturns = lazy(() => import("../pages/Seller/SellerReturns"));
 const ManageAddresses = lazy(() => import("../pages/Address/ManageAddresses"));
 const InventoryManagement = lazy(() => import("../pages/Seller/InventoryManagement"));
+const ApplyAsSeller = lazy(() => import("../pages/SellerApplication/ApplyAsSeller"));
+const SellerApplications = lazy(() => import("../pages/Admin/SellerApplications"));
 
 export function AppRouter() {
   return (
@@ -64,6 +66,7 @@ export function AppRouter() {
           <Route path="cart" element={<Cart />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="sell-on-shopease" element={<ApplyAsSeller />} />
           {/* Protected Routes */}
           <Route
             element={
@@ -105,6 +108,7 @@ export function AppRouter() {
             <Route path="users" element={<ManageUsers />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="categories" element={<AdminCategories />} />
+            <Route path="seller-applications" element={<SellerApplications />} />
           </Route>
         </Route>
 
