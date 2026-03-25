@@ -83,14 +83,14 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Low-stock threshold field on Product model | Backend | [ ] |
-| Low-stock alerts on seller/admin dashboard | Frontend | [ ] |
-| Auto-hide out-of-stock products from listings | Backend | [ ] |
-| Bulk stock update UI for sellers | Frontend | [ ] |
-| Wishlist model/schema (backend) | Backend | [ ] |
-| Wishlist API routes (add/remove/list) | Backend | [ ] |
-| Sync frontend wishlist Redux slice with backend | Frontend | [ ] |
-| Persist wishlist across login/logout/devices | Frontend + Backend | [ ] |
+| Low-stock threshold field on Product model | Backend | [x] |
+| Low-stock alerts on seller/admin dashboard | Frontend | [x] |
+| Auto-hide out-of-stock products from listings | Backend | [x] |
+| Bulk stock update UI for sellers | Frontend | [x] |
+| Wishlist model/schema (backend) | Backend | [x] |
+| Wishlist API routes (add/remove/list) | Backend | [x] |
+| Sync frontend wishlist Redux slice with backend | Frontend | [x] |
+| Persist wishlist across login/logout/devices | Frontend + Backend | [x] |
 
 **Depends on:** Nothing
 **Unlocks:** Reliable stock management, cross-device wishlist

@@ -1,9 +1,10 @@
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../features/cart/cartSlice";
+import { useClearCartApiMutation } from "../../features/cart/cartApiSlice";
 import { useCreateOrderMutation } from "../../features/order/orderApi";
 import {
-  useCreateTransactionMutation,
-  useVerifyTransactionMutation,
+  useInitiatePaymentMutation,
+  useVerifyAndCreateOrderMutation,
 } from "../../features/transaction/transactionApi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -15,37 +16,33 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   const cartItems = useSelector((state) => state.cart.items);
   const paymentMethod = useSelector((state) => state.cart.paymentMethod);
   const [createOrder] = useCreateOrderMutation();
-  const [createTransaction] = useCreateTransactionMutation();
-  const [verifyTransaction] = useVerifyTransactionMutation();
+  const [initiatePayment] = useInitiatePaymentMutation();
+  const [verifyAndCreateOrder] = useVerifyAndCreateOrderMutation();
+  const [clearCartApi] = useClearCartApiMutation();
 
-  // Calculate order prices (items, shipping, tax, total)
   const calculatePrices = () => {
     const itemsPrice = cartItems.reduce(
       (acc, item) => acc + (item.basePrice || 0) * item.quantity,
       0
     );
-
     const totalDiscount = cartItems.reduce(
-      (acc, item) => acc + ((item.discountAmount || 0) * item.quantity),
+      (acc, item) => acc + (item.discountAmount || 0) * item.quantity,
       0
     );
-
     const taxPrice = cartItems.reduce(
-      (acc, item) => acc + ((item.taxAmount || 0) * item.quantity),
+      (acc, item) => acc + (item.taxAmount || 0) * item.quantity,
       0
     );
-
     const shippingPrice = itemsPrice > 500 ? 0 : 50;
     const totalPrice = Number(
       (itemsPrice - totalDiscount + taxPrice + shippingPrice).toFixed(2)
     );
-
     return { itemsPrice, totalDiscount, taxPrice, shippingPrice, totalPrice };
   };
 
-  // Load Razorpay SDK script dynamically
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
@@ -54,69 +51,71 @@ const OrderReview = ({ onBack, selectedAddress }) => {
     });
   };
 
-  const { itemsPrice, totalDiscount, shippingPrice, taxPrice, totalPrice } = calculatePrices();
+  const { itemsPrice, totalDiscount, shippingPrice, taxPrice, totalPrice } =
+    calculatePrices();
 
-  // Handle order placement (create order and initiate payment if needed)
+  const buildOrderData = () => ({
+    orderItems: cartItems.map((item) => ({
+      product: item._id,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.finalPrice,
+      basePrice: item.basePrice,
+      discountPercentage: item.discountPercentage || 0,
+      discountAmount: item.discountAmount || 0,
+      taxPercentage: item.taxPercentage || 0,
+      taxAmount: item.taxAmount || 0,
+      seller: item?.seller?._id || item.seller,
+    })),
+    shippingAddress: selectedAddress._id,
+    paymentMethod,
+    itemsPrice,
+    totalDiscount,
+    shippingPrice,
+    taxPrice,
+    totalPrice,
+  });
+
+  const clearCartEverywhere = () => {
+    dispatch(clearCart());
+    if (user) clearCartApi().catch(() => {});
+  };
+
+  // Handle order placement
   const handleOrderPlacement = async () => {
-    const res = await loadRazorpayScript();
-    if (!res) {
-      toast.error("Razorpay SDK failed to load.");
-      return;
-    }
-
-    try {
-      const orderData = {
-        orderItems: cartItems.map((item) => ({
-          product: item._id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.finalPrice, // Final price including taxes
-          basePrice: item.basePrice,
-          discountPercentage: item.discountPercentage || 0,
-          discountAmount: item.discountAmount || 0,
-          taxPercentage: item.taxPercentage || 0,
-          taxAmount: item.taxAmount || 0,
-          seller: item?.seller?._id || item.seller,
-        })),
-        shippingAddress: selectedAddress._id,
-        paymentMethod,
-        itemsPrice,
-        totalDiscount,
-        shippingPrice,
-        taxPrice,
-        totalPrice,
-      };
-
-      const response = await createOrder(orderData).unwrap();
-
-      if (paymentMethod === "Cash on Delivery") {
-        dispatch(clearCart());
+    if (paymentMethod === "Cash on Delivery") {
+      // COD: create order directly (no payment needed)
+      try {
+        const response = await createOrder(buildOrderData()).unwrap();
+        clearCartEverywhere();
         toast.success("Order placed successfully (Cash on Delivery)");
         navigate("/order-success", {
           state: { orderId: response.order._id, totalPrice },
         });
-      } else {
-        handleRazorpayPayment(response.order._id);
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to place order");
       }
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to place order");
-      console.error("Order placement error:", err);
+    } else {
+      // Online payment: initiate payment FIRST, create order AFTER payment succeeds
+      await handleRazorpayPayment();
     }
   };
 
-  // Handle Razorpay payment initiation and verification
-  const handleRazorpayPayment = async (orderId) => {
-    const res = await loadRazorpayScript();
-    if (!res) {
+  // Handle Razorpay payment (payment-first flow)
+  const handleRazorpayPayment = async () => {
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
       toast.error("Razorpay SDK failed to load.");
       return;
     }
 
     try {
-      const { razorpayOrderId, amount, currency } = await createTransaction({
-        orderId,
+      // Step 1: Create Razorpay order (no DB order yet)
+      const { razorpayOrderId, amount, currency } = await initiatePayment({
+        amount: totalPrice,
       }).unwrap();
 
+      // Step 2: Open Razorpay checkout
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount,
@@ -125,23 +124,26 @@ const OrderReview = ({ onBack, selectedAddress }) => {
         description: "Order Payment",
         order_id: razorpayOrderId,
         handler: async (response) => {
+          // Step 3: On payment success → verify + create DB order
           try {
-            const verificationResponse = await verifyTransaction({
+            const result = await verifyAndCreateOrder({
               razorpayOrderId,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
-              orderId,
+              orderData: buildOrderData(),
               email: user.email,
             }).unwrap();
 
-            dispatch(clearCart());
-            navigate("/order-success", {
-              state: { orderId, totalPrice },
-            });
+            clearCartEverywhere();
             toast.success("Payment successful! Order placed.");
+            navigate("/order-success", {
+              state: { orderId: result.order._id, totalPrice },
+            });
           } catch (error) {
-            toast.error(error?.data?.message || "Payment verification failed");
-            console.error("Payment verification error:", error);
+            toast.error(
+              error?.data?.message || "Payment verified but order creation failed. Contact support."
+            );
+            console.error("Verify and create order error:", error);
           }
         },
         prefill: {
@@ -149,20 +151,18 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           email: user.email,
           contact: selectedAddress.mobileNumber,
         },
-        theme: {
-          color: "#3399cc",
-        },
+        theme: { color: "#3399cc" },
       };
 
       const razorpay = new window.Razorpay(options);
-      razorpay.on('payment.failed', (response) => {
-        toast.error("Payment failed. Please try again.");
+      razorpay.on("payment.failed", (response) => {
+        toast.error("Payment failed. No order was created. Please try again.");
         console.error("Razorpay payment failure:", response.error);
       });
       razorpay.open();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to initiate payment");
-      console.error("Razorpay payment initiation failed:", err);
+      console.error("Razorpay initiation failed:", err);
     }
   };
 
@@ -179,17 +179,22 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           return (
             <div key={item._id} className="flex flex-col py-2 border-b">
               <div className="flex justify-between">
-                <span>{item.name} (x{item.quantity})</span>
+                <span>
+                  {item.name} (x{item.quantity})
+                </span>
                 <span>₹{itemTotal.toFixed(2)}</span>
               </div>
               <div className="text-sm text-gray-600">
                 <p>Base Price: ₹{basePrice.toFixed(2)}</p>
                 {discountAmount > 0 && (
                   <p className="text-red-500">
-                    Discount ({item.discountPercentage || 0}%): ₹{discountAmount.toFixed(2)}
+                    Discount ({item.discountPercentage || 0}%): ₹
+                    {discountAmount.toFixed(2)}
                   </p>
                 )}
-                <p>Taxes ({item.taxPercentage || 0}%): ₹{taxAmount.toFixed(2)}</p>
+                <p>
+                  Taxes ({item.taxPercentage || 0}%): ₹{taxAmount.toFixed(2)}
+                </p>
               </div>
             </div>
           );
@@ -199,12 +204,19 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       <div className="space-y-2 text-right">
         <p>Items Price: ₹{itemsPrice.toFixed(2)}</p>
         {totalDiscount > 0 && (
-          <p className="text-red-500">Total Discount: ₹{totalDiscount.toFixed(2)}</p>
+          <p className="text-red-500">
+            Total Discount: ₹{totalDiscount.toFixed(2)}
+          </p>
         )}
         <p>Tax Price: ₹{taxPrice.toFixed(2)}</p>
-        <p>Shipping Price: {shippingPrice === 0 ? "Free" : `₹${shippingPrice.toFixed(2)}`}</p>
+        <p>
+          Shipping Price:{" "}
+          {shippingPrice === 0 ? "Free" : `₹${shippingPrice.toFixed(2)}`}
+        </p>
         <div className="border-t pt-2 mt-2">
-          <p className="font-semibold text-lg">Total Price: ₹{totalPrice.toFixed(2)}</p>
+          <p className="font-semibold text-lg">
+            Total Price: ₹{totalPrice.toFixed(2)}
+          </p>
         </div>
         {paymentMethod === "Cash on Delivery" && (
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
@@ -224,7 +236,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
           onClick={handleOrderPlacement}
           className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
         >
-          Place Order
+          {paymentMethod === "Cash on Delivery" ? "Place Order" : "Pay & Place Order"}
         </button>
       </div>
     </div>

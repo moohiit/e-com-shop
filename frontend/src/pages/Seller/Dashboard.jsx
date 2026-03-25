@@ -1,5 +1,7 @@
 import { useGetSellerDashboardQuery } from "../../features/order/sellerOrderApi";
-import { Loader2, Package, IndianRupee, ShoppingCart, TrendingUp } from "lucide-react";
+import { useGetLowStockProductsQuery } from "../../features/products/productApiSlice";
+import { Link } from "react-router-dom";
+import { Loader2, Package, IndianRupee, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -9,6 +11,7 @@ const COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"];
 
 function Dashboard() {
   const { data, isLoading, isError } = useGetSellerDashboardQuery();
+  const { data: lowStockData } = useGetLowStockProductsQuery();
 
   if (isLoading) {
     return (
@@ -126,6 +129,48 @@ function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Low Stock Alert */}
+      {lowStockData?.products?.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="text-red-500" size={20} />
+              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">
+                Low Stock Alert ({lowStockData.products.length})
+              </h2>
+            </div>
+            <Link
+              to="/seller/inventory"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Manage Inventory
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b dark:border-gray-700">
+                  <th className="pb-2 text-sm text-gray-500">Product</th>
+                  <th className="pb-2 text-sm text-gray-500 text-right">Stock</th>
+                  <th className="pb-2 text-sm text-gray-500 text-right">Threshold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStockData.products.slice(0, 5).map((p) => (
+                  <tr key={p._id} className="border-b dark:border-gray-700">
+                    <td className="py-2">{p.name}</td>
+                    <td className={`py-2 text-right font-semibold ${p.stock === 0 ? "text-red-600" : "text-yellow-600"}`}>
+                      {p.stock}
+                    </td>
+                    <td className="py-2 text-right text-gray-500">{p.lowStockThreshold}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Top Products */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">

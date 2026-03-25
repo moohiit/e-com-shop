@@ -51,6 +51,11 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    lowStockThreshold: {
+      type: Number,
+      default: 5,
+      min: 0,
+    },
 
     images: [
       {
@@ -109,6 +114,10 @@ productSchema.virtual("finalPrice").get(function () {
 
 productSchema.virtual("discountAmount").get(function () {
   return +((this.basePrice * this.discountPercentage) / 100).toFixed(2);
+});
+
+productSchema.virtual("isLowStock").get(function () {
+  return this.stock > 0 && this.stock <= this.lowStockThreshold;
 });
 
 productSchema.virtual("taxAmount").get(function () {
