@@ -2,6 +2,23 @@ import { apiSlice } from "../../services/apiSlice";
 
 export const transactionApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+    // New payment-first flow
+    initiatePayment: builder.mutation({
+      query: (data) => ({
+        url: "/transactions/initiate",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    verifyAndCreateOrder: builder.mutation({
+      query: (data) => ({
+        url: "/transactions/verify-and-create",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Order", "SellerOrder", "Transaction", "SellerTransaction", "MyOrder"],
+    }),
+    // Legacy flow (kept for retrying unpaid orders)
     createTransaction: builder.mutation({
       query: (data) => ({
         url: "/transactions/create",
@@ -64,6 +81,8 @@ export const transactionApiSlice = apiSlice.injectEndpoints({
 });
 
 export const {
+  useInitiatePaymentMutation,
+  useVerifyAndCreateOrderMutation,
   useCreateTransactionMutation,
   useVerifyTransactionMutation,
   useGetTransactionByIdQuery,

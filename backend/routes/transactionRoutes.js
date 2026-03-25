@@ -1,5 +1,7 @@
 import express from "express";
 import {
+  initiateRazorpayPayment,
+  verifyAndCreateOrder,
   createRazorpayOrder,
   verifyRazorpayPayment,
   getTransactionById,
@@ -17,19 +19,22 @@ const router = express.Router();
 // Protect all routes
 router.use(protect);
 
-// Transaction routes
+// New payment-first flow (initiate payment → verify + create order)
+router.route("/initiate").post(initiateRazorpayPayment);
+router.route("/verify-and-create").post(verifyAndCreateOrder);
+
+// Legacy flow (create order first → then pay)
 router.route("/create").post(createRazorpayOrder);
 router.route("/verify").post(verifyRazorpayPayment);
+
 router.route("/:id").get(getTransactionById);
-router.route("/").get(getAllUserTransactions); // Get all transactions user route
+router.route("/").get(getAllUserTransactions);
 
 // Seller or Admin routes
-router.route("/admin").get(isSellerOrAdmin, getAllTransactions); // Get all transactions admin route
-router.route("/:id/status").put(isSellerOrAdmin, updateTransactionStatus); // Update transaction status (Admin)
-router.route("/:id").delete(isSellerOrAdmin, deleteTransaction); // Delete transaction (Admin)
-router.route("/user/:userId").get(isSellerOrAdmin, getUserTransactions); // Get all transactions for a specific user (Admin)
-router
-  .route("/seller-transactions")
-  .get(isSellerOrAdmin, getSellerTransactions); // Get seller transactions (Seller/Admin)
+router.route("/admin").get(isSellerOrAdmin, getAllTransactions);
+router.route("/:id/status").put(isSellerOrAdmin, updateTransactionStatus);
+router.route("/:id").delete(isSellerOrAdmin, deleteTransaction);
+router.route("/user/:userId").get(isSellerOrAdmin, getUserTransactions);
+router.route("/seller-transactions").get(isSellerOrAdmin, getSellerTransactions);
 
 export default router;
