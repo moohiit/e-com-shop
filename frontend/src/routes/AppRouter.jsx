@@ -44,6 +44,7 @@ const SellerReturns = lazy(() => import("../pages/Seller/SellerReturns"));
 const ManageAddresses = lazy(() => import("../pages/Address/ManageAddresses"));
 const InventoryManagement = lazy(() => import("../pages/Seller/InventoryManagement"));
 const BulkUpload = lazy(() => import("../pages/Seller/BulkUpload"));
+const ChatPage = lazy(() => import("../pages/Chat/ChatPage"));
 const ApplyAsSeller = lazy(() => import("../pages/SellerApplication/ApplyAsSeller"));
 const SellerApplications = lazy(() => import("../pages/Admin/SellerApplications"));
 
@@ -75,6 +76,7 @@ export function AppRouter() {
             }
           >
             <Route path="profile" element={<Profile />} />
+            <Route path="chat" element={<ChatPage />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
             <Route path="checkout" element={<Checkout />} />

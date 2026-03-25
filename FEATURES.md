@@ -1,6 +1,6 @@
 # E-Commerce Shop - Feature Tracker
 
-> Last updated: 2026-03-25 | Sprint 7 completed
+> Last updated: 2026-03-25 | Sprint 8 completed (ALL SPRINTS DONE)
 
 ---
 
@@ -110,6 +110,16 @@
 - [x] Recently viewed products tracked in localStorage, shown on homepage
 - [x] Related products API (same category) + section on product detail page
 
+### Chat, Docker & CI/CD (Sprint 8)
+- [x] Real-time chat with Socket.io (Conversation + Message models)
+- [x] Chat backend: create/list conversations, send/get messages, unread counts
+- [x] Socket.io: join rooms, typing indicators, real-time message delivery
+- [x] Chat UI: conversation list, chat window with auto-scroll, typing indicator
+- [x] "Chat with Seller" button on product detail page
+- [x] Accessible at `/chat` for users, sellers, and admins
+- [x] Dockerfile + docker-compose (app + MongoDB)
+- [x] GitHub Actions CI pipeline (install, build, lint)
+
 ### Other
 - [x] Contact Form with Email (Nodemailer)
 - [x] Dark Mode
@@ -147,10 +157,11 @@
 - [x] ~~**16. Recently Viewed Products**~~ — Sprint 7
 - [x] ~~**17. Related/Recommended Products**~~ — Sprint 7
 
-### Remaining
-- [ ] **18. Live Chat / Customer Support** - Chat widget for buyer-seller or buyer-support communication
-- [ ] **19. Unit & E2E Tests** - Jest for backend, React Testing Library + Playwright/Cypress for frontend
-- [ ] **20. Deployment Setup** - Docker, CI/CD pipeline, production environment configuration
+### All Features Complete
+
+- [x] ~~**18. Live Chat / Customer Support**~~ — Sprint 8
+- [x] ~~**20. Deployment Setup (Docker + CI/CD)**~~ — Sprint 8
+- [ ] **19. Unit & E2E Tests** — Deferred (can be added incrementally)
 
 ---
 
@@ -158,10 +169,10 @@
 
 | Category         | Count |
 |------------------|-------|
-| Completed        | 36 features |
+| Completed        | 38 features |
 | Partially Done   | 0 features  |
-| Remaining        | 3 features  |
-| **Overall**      | **~95% complete** |
+| Remaining        | 1 (tests)   |
+| **Overall**      | **~98% complete** |
 
 ---
 
