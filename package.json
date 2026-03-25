@@ -27,6 +27,7 @@
     "multer": "^2.0.0",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.3",
+    "pdfkit": "^0.18.0",
     "razorpay": "^2.9.6",
     "slugify": "^1.6.6"
   },
