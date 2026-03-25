@@ -8,7 +8,7 @@
     "server": "nodemon backend/server.js",
     "client": "cd frontend && npm run dev",
     "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "nodemon backend/index.js"
+    "start": "node backend/index.js"
   },
   "keywords": [],
   "author": "",
