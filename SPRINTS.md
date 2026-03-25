@@ -140,15 +140,15 @@
 
 | Task | Scope | Status |
 |------|-------|--------|
-| Chat model (messages between buyer-seller) | Backend | [ ] |
-| Real-time chat with Socket.io | Backend + Frontend | [ ] |
-| Chat UI widget on product/order pages | Frontend | [ ] |
-| Backend unit tests (Jest) — auth, orders, products | Backend | [ ] |
-| Frontend component tests (React Testing Library) | Frontend | [ ] |
-| E2E tests (Playwright/Cypress) — critical flows | Frontend | [ ] |
-| Dockerfile + docker-compose | DevOps | [ ] |
-| CI/CD pipeline (GitHub Actions) | DevOps | [ ] |
-| Production env config & deployment | DevOps | [ ] |
+| Chat model (messages between buyer-seller) | Backend | [x] |
+| Real-time chat with Socket.io | Backend + Frontend | [x] |
+| Chat UI widget on product/order pages | Frontend | [x] |
+| Backend unit tests (Jest) — auth, orders, products | Backend | [ ] Deferred |
+| Frontend component tests (React Testing Library) | Frontend | [ ] Deferred |
+| E2E tests (Playwright/Cypress) — critical flows | Frontend | [ ] Deferred |
+| Dockerfile + docker-compose | DevOps | [x] |
+| CI/CD pipeline (GitHub Actions) | DevOps | [x] |
+| Production env config & deployment | DevOps | [x] |
 
 **Depends on:** All features complete
 **Unlocks:** Production-ready application
