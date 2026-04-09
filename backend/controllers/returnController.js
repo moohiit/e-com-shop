@@ -148,10 +148,11 @@ export const approveReturn = async (req, res) => {
       return res.status(400).json({ success: false, message: "Return request is not pending." });
     }
 
-    // Process refund
+    // Process refund (seller is the actor — they own this return)
     const refundResult = await processRefund(
       returnRequest.order,
-      returnRequest.refundAmount
+      returnRequest.refundAmount,
+      req.user
     );
 
     if (!refundResult.success) {

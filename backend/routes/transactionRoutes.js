@@ -27,14 +27,17 @@ router.route("/verify-and-create").post(verifyAndCreateOrder);
 router.route("/create").post(createRazorpayOrder);
 router.route("/verify").post(verifyRazorpayPayment);
 
-router.route("/:id").get(getTransactionById);
+// Static routes MUST be declared before /:id to prevent collisions
 router.route("/").get(getAllUserTransactions);
-
-// Seller or Admin routes
 router.route("/admin").get(isSellerOrAdmin, getAllTransactions);
-router.route("/:id/status").put(isSellerOrAdmin, updateTransactionStatus);
-router.route("/:id").delete(isSellerOrAdmin, deleteTransaction);
-router.route("/user/:userId").get(isSellerOrAdmin, getUserTransactions);
 router.route("/seller-transactions").get(isSellerOrAdmin, getSellerTransactions);
+router.route("/user/:userId").get(isSellerOrAdmin, getUserTransactions);
+router.route("/:id/status").put(isSellerOrAdmin, updateTransactionStatus);
+
+// Combined GET + DELETE on /:id (avoids previous duplicate route block)
+router
+  .route("/:id")
+  .get(getTransactionById)
+  .delete(isSellerOrAdmin, deleteTransaction);
 
 export default router;

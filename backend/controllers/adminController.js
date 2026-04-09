@@ -14,9 +14,11 @@ export const getAllUsers = async (req, res) => {
       query.isActive = req.query.isActive === "true";
 
     if (req.query.keyword) {
+      // Escape regex metacharacters to prevent injection
+      const safe = String(req.query.keyword).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       query.$or = [
-        { name: { $regex: req.query.keyword, $options: "i" } },
-        { email: { $regex: req.query.keyword, $options: "i" } },
+        { name: { $regex: safe, $options: "i" } },
+        { email: { $regex: safe, $options: "i" } },
       ];
     }
 
