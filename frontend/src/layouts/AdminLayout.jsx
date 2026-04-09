@@ -1,97 +1,94 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useTheme } from "../theme/ThemeProvider";
-import { Menu, X, LogOut } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  Users,
+  Boxes,
+  Tags,
+  UserCheck,
+} from "lucide-react";
 import { logoutUser } from "../features/auth/authSlice";
-import { useLogoutMutation } from "../features/auth/authApi";
+import DashboardSidebar from "../components/common/DashboardSidebar";
 
 export default function AdminLayout() {
-  const { darkMode } = useTheme();
-  const [logoutApi] = useLogoutMutation();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const navItems = [
-    { to: "/admin/dashboard", label: "Dashboard" },
-    { to: "/admin/users", label: "Manage Users" },
-    { to: "/admin/products", label: "Manage Products" },
-    { to: "/admin/categories", label: "Manage Categories" },
-    { to: "/admin/seller-applications", label: "Seller Applications" },
+  const user = useSelector((state) => state.auth.user);
+
+  const sections = [
+    {
+      heading: "Overview",
+      items: [
+        {
+          to: "/admin/dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      heading: "Catalog",
+      items: [
+        { to: "/admin/products", label: "Manage Products", icon: Boxes },
+        { to: "/admin/categories", label: "Manage Categories", icon: Tags },
+      ],
+    },
+    {
+      heading: "People",
+      items: [
+        { to: "/admin/users", label: "Manage Users", icon: Users },
+        {
+          to: "/admin/seller-applications",
+          label: "Seller Applications",
+          icon: UserCheck,
+        },
+      ],
+    },
   ];
 
   const handleLogout = async () => {
     try {
-      dispatch(logoutUser());
+      await dispatch(logoutUser());
       navigate("/auth/login", { replace: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   };
 
   return (
-    <div
-      className={`min-h-screen flex flex-col md:flex-row ${
-        darkMode ? "dark bg-gray-900 text-white" : "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {/* Topbar for Mobile */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow sticky top-0 z-30">
-        <h1 className="text-xl font-bold">Admin Panel</h1>
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
+      {/* Mobile topbar */}
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold flex items-center justify-center text-sm">
+            A
+          </div>
+          <h1 className="text-base font-semibold">Admin Panel</h1>
+        </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="text-gray-800 dark:text-white"
+          aria-label="Toggle navigation"
+          className="text-gray-700 dark:text-gray-200 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         >
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed md:static top-0 left-0 h-screen w-64 bg-white dark:bg-gray-800 shadow-lg z-40 transform transition-transform ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
-      >
-        <div className="px-6 py-4 text-2xl font-bold border-b dark:border-gray-700">
-          Admin Panel
-        </div>
-        <nav className="p-4 flex flex-col space-y-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive
-                    ? "bg-blue-600 text-white"
-                    : "hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <button
-            onClick={handleLogout}
-            className="mt-8 flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-transparent hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-700 dark:hover:text-white rounded-md transition-colors"
-          >
-            <LogOut size={16} /> Logout
-          </button>
-        </nav>
-      </aside>
+      <DashboardSidebar
+        brand={{ title: "Admin Panel", subtitle: "ShopEase Console", accent: "blue" }}
+        sections={sections}
+        user={user}
+        onLogout={handleLogout}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+      />
 
-      {/* Overlay for Mobile */}
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-black opacity-40 z-30 md:hidden"
-        />
-      )}
-
-      {/* Main Content */}
-      <main className="flex-1 h-screen overflow-y-auto p-4 pt-16 md:pt-6">
+      {/* Main */}
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto pt-16 md:pt-0 px-4 md:px-6 py-6">
         <Outlet />
       </main>
     </div>

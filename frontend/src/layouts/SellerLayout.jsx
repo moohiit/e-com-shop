@@ -1,90 +1,100 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { useTheme } from '../theme/ThemeProvider'
-import { Menu, X, LogOut } from 'lucide-react'
-import { useDispatch } from 'react-redux'
-import { logoutUser } from '../features/auth/authSlice'
-
+import { Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  Package,
+  PlusSquare,
+  ShoppingBag,
+  RotateCcw,
+  Warehouse,
+  Upload,
+  Tags,
+  Home,
+} from "lucide-react";
+import { logoutUser } from "../features/auth/authSlice";
+import DashboardSidebar from "../components/common/DashboardSidebar";
 
 export default function SellerLayout() {
-  const { darkMode } = useTheme()
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
 
-  const navItems = [
-    { to: '/', label: 'Home' },
-    { to: '/seller/dashboard', label: 'Dashboard' },
-    { to: '/seller/products', label: 'Manage Products' },
-    { to: '/seller/add-product', label: 'Add Product' },
-    { to: '/seller/orders', label: 'Manage Orders' },
-    { to: '/seller/returns', label: 'Return Requests' },
-    { to: '/seller/inventory', label: 'Inventory' },
-    { to: '/seller/bulk-upload', label: 'Bulk Upload' },
-    { to: '/seller/categories', label: 'Manage Categories' },
-  ]
+  const sections = [
+    {
+      heading: "Overview",
+      items: [
+        { to: "/", label: "Storefront", icon: Home, end: true },
+        {
+          to: "/seller/dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      heading: "Catalog",
+      items: [
+        { to: "/seller/products", label: "Manage Products", icon: Package },
+        { to: "/seller/add-product", label: "Add Product", icon: PlusSquare },
+        { to: "/seller/categories", label: "Categories", icon: Tags },
+        { to: "/seller/inventory", label: "Inventory", icon: Warehouse },
+        { to: "/seller/bulk-upload", label: "Bulk Upload", icon: Upload },
+      ],
+    },
+    {
+      heading: "Operations",
+      items: [
+        { to: "/seller/orders", label: "Manage Orders", icon: ShoppingBag },
+        { to: "/seller/returns", label: "Return Requests", icon: RotateCcw },
+      ],
+    },
+  ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      dispatch(logoutUser())
-      navigate('/auth/login', { replace: true })
+      await dispatch(logoutUser());
+      navigate("/auth/login", { replace: true });
     } catch (err) {
-      console.log(err)
+      console.error(err);
     }
-  }
+  };
 
   return (
-    <div className={`min-h-screen flex flex-col md:flex-row ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
-
-      {/* Topbar - Mobile only */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow sticky top-0 z-30">
-        <h1 className="text-xl font-bold">Seller Panel</h1>
-        <button onClick={() => setIsOpen(!isOpen)} className="text-gray-800 dark:text-white">
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
+      {/* Mobile topbar */}
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-sm">
+            S
+          </div>
+          <h1 className="text-base font-semibold">Seller Panel</h1>
+        </div>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Toggle navigation"
+          className="text-gray-700 dark:text-gray-200 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed md:static top-0 left-0 h-screen w-64 bg-white dark:bg-gray-800 shadow-lg z-40 transform transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
-      >
-        <div className="px-6 py-4 text-2xl font-bold border-b dark:border-gray-700">Seller Panel</div>
-        <nav className="p-4 flex flex-col space-y-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-sm font-medium ${isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <button
-            onClick={handleLogout}
-            className="mt-8 flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-transparent hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-700 dark:hover:text-white rounded-md transition-colors"
-          >
-            <LogOut size={16} /> Logout
-          </button>
-        </nav>
-      </aside>
+      <DashboardSidebar
+        brand={{ title: "Seller Panel", subtitle: "Grow your business", accent: "amber" }}
+        sections={sections}
+        user={user}
+        onLogout={handleLogout}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+      />
 
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-black opacity-40 z-30 md:hidden"
-        />
-      )}
-
-      {/* Main content */}
-      <main className="flex-1 h-screen overflow-y-auto p-4 pt-16 md:pt-6">
+      {/* Main */}
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto pt-16 md:pt-0 px-4 md:px-6 py-6">
         <Outlet />
       </main>
     </div>
-  )
+  );
 }
