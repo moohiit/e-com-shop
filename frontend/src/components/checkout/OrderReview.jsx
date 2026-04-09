@@ -8,6 +8,7 @@ import {
 } from "../../features/transaction/transactionApi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { calculateCartPricing, calculateLinePricing } from "../../utils/pricing";
 
 const OrderReview = ({ onBack, selectedAddress }) => {
   const user = useSelector((state) => state.auth.user);
@@ -20,25 +21,7 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   const [verifyAndCreateOrder] = useVerifyAndCreateOrderMutation();
   const [clearCartApi] = useClearCartApiMutation();
 
-  const calculatePrices = () => {
-    const itemsPrice = cartItems.reduce(
-      (acc, item) => acc + (item.basePrice || 0) * item.quantity,
-      0
-    );
-    const totalDiscount = cartItems.reduce(
-      (acc, item) => acc + (item.discountAmount || 0) * item.quantity,
-      0
-    );
-    const taxPrice = cartItems.reduce(
-      (acc, item) => acc + (item.taxAmount || 0) * item.quantity,
-      0
-    );
-    const shippingPrice = itemsPrice > 500 ? 0 : 50;
-    const totalPrice = Number(
-      (itemsPrice - totalDiscount + taxPrice + shippingPrice).toFixed(2)
-    );
-    return { itemsPrice, totalDiscount, taxPrice, shippingPrice, totalPrice };
-  };
+  // Pricing comes from the shared util — same numbers as the cart page.
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -52,28 +35,17 @@ const OrderReview = ({ onBack, selectedAddress }) => {
   };
 
   const { itemsPrice, totalDiscount, shippingPrice, taxPrice, totalPrice } =
-    calculatePrices();
+    calculateCartPricing(cartItems);
 
+  // Backend recomputes ALL monetary fields from the product DB. We only send
+  // the line items (product + qty) and shipping/payment info.
   const buildOrderData = () => ({
     orderItems: cartItems.map((item) => ({
       product: item._id,
-      name: item.name,
       quantity: item.quantity,
-      price: item.finalPrice,
-      basePrice: item.basePrice,
-      discountPercentage: item.discountPercentage || 0,
-      discountAmount: item.discountAmount || 0,
-      taxPercentage: item.taxPercentage || 0,
-      taxAmount: item.taxAmount || 0,
-      seller: item?.seller?._id || item.seller,
     })),
     shippingAddress: selectedAddress._id,
     paymentMethod,
-    itemsPrice,
-    totalDiscount,
-    shippingPrice,
-    taxPrice,
-    totalPrice,
   });
 
   const clearCartEverywhere = () => {
@@ -171,10 +143,12 @@ const OrderReview = ({ onBack, selectedAddress }) => {
       <h3 className="text-lg font-semibold">Review Your Order</h3>
       <div>
         {cartItems.map((item) => {
-          const basePrice = (item.basePrice || 0) * item.quantity;
-          const discountAmount = (item.discountAmount || 0) * item.quantity;
-          const taxAmount = (item.taxAmount || 0) * item.quantity;
-          const itemTotal = (item.finalPrice || 0) * item.quantity;
+          const {
+            basePriceLine: basePrice,
+            discountAmountLine: discountAmount,
+            taxAmountLine: taxAmount,
+            itemTotal,
+          } = calculateLinePricing(item);
 
           return (
             <div key={item._id} className="flex flex-col py-2 border-b">

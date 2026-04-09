@@ -23,6 +23,7 @@ import { useGetProductByIdQuery } from '../../features/products/productApiSlice'
 import { toast } from 'react-hot-toast';
 import AccessDenied from '../../components/common/AccessDenied';
 import { FaExclamationTriangle, FaHeart, FaTrash } from 'react-icons/fa';
+import { calculateCartPricing, calculateLinePricing } from '../../utils/pricing';
 
 function Cart() {
   const { user } = useSelector((state) => state.auth);
@@ -52,7 +53,7 @@ function Cart() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverCart]);
+  }, [serverCart, user]);
 
   if (user?.role === 'seller' || user?.role === 'admin') {
     return <AccessDenied />;
@@ -146,33 +147,8 @@ function Cart() {
     navigate('/checkout');
   };
 
-  // Calculate price breakdown for the cart summary
-  const calculatePrices = () => {
-    const itemsPrice = cartItems.reduce(
-      (acc, item) => acc + (item.basePrice || 0) * item.quantity,
-      0
-    );
-
-    const taxPrice = cartItems.reduce(
-      (acc, item) => {
-        return acc + ((item.taxAmount || 0) * item.quantity);
-      },
-      0
-    );
-
-    const totalDiscount = cartItems.reduce(
-      (acc, item) =>
-        acc + ((item.discountAmount || 0) * item.quantity),
-      0
-    );
-
-    const shippingPrice = itemsPrice > 500 ? 0 : 50;
-    const totalPrice = Number((itemsPrice - totalDiscount + taxPrice + shippingPrice).toFixed(2));
-
-    return { itemsPrice, taxPrice, totalDiscount, shippingPrice, totalPrice };
-  };
-
-  const { itemsPrice, taxPrice, totalDiscount, shippingPrice, totalPrice } = calculatePrices();
+  const { itemsPrice, taxPrice, totalDiscount, shippingPrice, totalPrice } =
+    calculateCartPricing(cartItems);
 
   if (cartItems.length === 0) {
     return (
@@ -205,21 +181,23 @@ function Cart() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4">
           {cartItems.map((item) => {
-            const basePrice = (item.basePrice || 0) * item.quantity;
-            const discountAmount = (item.discountAmount || 0) * item.quantity;
-            const taxAmount = (item.taxAmount || 0) * item.quantity;
-            const itemTotal = (item.finalPrice || 0) * item.quantity;
+            const {
+              basePriceLine: basePrice,
+              discountAmountLine: discountAmount,
+              taxAmountLine: taxAmount,
+              itemTotal,
+            } = calculateLinePricing(item);
 
             return (
               <div
                 key={item._id}
-                className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-4 gap-4"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
                   <img
                     src={item.images[0]?.imageUrl || "/placeholder-image.jpg"}
                     alt={item.name}
@@ -286,7 +264,7 @@ function Cart() {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 sm:gap-2 sm:shrink-0">
                   <button
                     onClick={() => handleRemove(item._id)}
                     className="text-red-500 hover:text-red-700"
