@@ -1,29 +1,37 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { FiShoppingBag, FiTruck, FiShield, FiHeadphones, FiStar, FiTrendingUp } from 'react-icons/fi';
+import { FiShoppingBag, FiTruck, FiShield, FiHeadphones, FiStar, FiTrendingUp, FiPackage } from 'react-icons/fi';
+import { Loader2 } from 'lucide-react';
 import RecentlyViewed from '../../components/products/RecentlyViewed';
+import ProductCard from '../../components/products/ProductCard';
+import { useFetchCategoriesQuery } from '../../features/category/categoryApiSlice';
+import { useFetchAllProductsQuery } from '../../features/products/productApiSlice';
 
 function Home() {
   const user = useSelector((state) => state.auth.user);
   const role = user?.role;
   const userName = user?.name || 'Guest';
 
-  // Featured categories data
-  const categories = [
-    { id: 1, name: 'Electronics', image: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03' },
-    { id: 2, name: 'Fashion', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b' },
-    { id: 3, name: 'Home & Kitchen', image: 'https://images.unsplash.com/photo-1556910096-6f5e72db6803' },
-    { id: 4, name: 'Books', image: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d' },
-  ];
+  // Live data — categories and most-popular products
+  const {
+    data: categoryData,
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+  } = useFetchCategoriesQuery();
 
-  // Featured products data
-  const featuredProducts = [
-    { id: 1, name: 'Wireless Headphones', price: 99.99, image: 'https://source.unsplash.com/random/300x200/?headphones' },
-    { id: 2, name: 'Smart Watch', price: 199.99, image: 'https://source.unsplash.com/random/300x200/?smartwatch' },
-    { id: 3, name: 'Bluetooth Speaker', price: 79.99, image: 'https://source.unsplash.com/random/300x200/?speaker' },
-    { id: 4, name: 'Gaming Keyboard', price: 129.99, image: 'https://source.unsplash.com/random/300x200/?keyboard' },
-  ];
+  const {
+    data: featuredData,
+    isLoading: featuredLoading,
+    isError: featuredError,
+  } = useFetchAllProductsQuery({ sort: 'popular', limit: 8, page: 1 });
+
+  // Show only top-level categories on the landing page (no parents)
+  const allCategories = categoryData?.categories || [];
+  const topCategories = allCategories
+    .filter((c) => !c.parents || c.parents.length === 0)
+    .slice(0, 8);
+  const featuredProducts = (featuredData?.products || []).slice(0, 8);
 
   return (
     <div className="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
@@ -169,28 +177,47 @@ function Home() {
       <section className="px-6 py-16 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl md:text-3xl font-bold">Shop by Category</h2>
-          <Link to="/categories" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link to="/products" className="text-blue-600 dark:text-blue-400 hover:underline">
             View all categories
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              to={`/products?category=${category.name.toLowerCase()}`}
-              className="group relative overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="w-full h-40 md:h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                <h3 className="text-white text-lg font-semibold">{category.name}</h3>
-              </div>
-            </Link>
-          ))}
-        </div>
+
+        {categoriesLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : categoriesError ? (
+          <p className="text-center text-red-500 py-12">
+            Failed to load categories. Please try again later.
+          </p>
+        ) : topCategories.length === 0 ? (
+          <p className="text-center text-gray-500 py-12">No categories yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+            {topCategories.map((category) => (
+              <Link
+                key={category._id}
+                to={`/products?category=${encodeURIComponent(category.slug || category.name)}`}
+                className="group relative overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-all duration-300 bg-gray-100 dark:bg-gray-800"
+              >
+                {category.image?.imageUrl ? (
+                  <img
+                    src={category.image.imageUrl}
+                    alt={category.name}
+                    className="w-full h-40 md:h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="w-full h-40 md:h-48 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                    <FiPackage className="w-12 h-12 text-white opacity-80" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
+                  <h3 className="text-white text-lg font-semibold capitalize">{category.name}</h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Featured Products */}
@@ -202,43 +229,24 @@ function Home() {
               View all products
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white dark:bg-gray-700 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-2 right-2 bg-yellow-400 text-gray-900 px-2 py-1 rounded text-xs font-bold">
-                    Hot
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
-                  <div className="flex items-center mb-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <FiStar
-                        key={star}
-                        className={`w-4 h-4 ${star <= 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-500'}`}
-                      />
-                    ))}
-                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(24)</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-lg">${product.price}</span>
-                    <button className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+
+          {featuredLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : featuredError ? (
+            <p className="text-center text-red-500 py-12">
+              Failed to load products. Please try again later.
+            </p>
+          ) : featuredProducts.length === 0 ? (
+            <p className="text-center text-gray-500 py-12">No products available yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

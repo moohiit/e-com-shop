@@ -47,6 +47,12 @@ const BulkUpload = lazy(() => import("../pages/Seller/BulkUpload"));
 const ChatPage = lazy(() => import("../pages/Chat/ChatPage"));
 const ApplyAsSeller = lazy(() => import("../pages/SellerApplication/ApplyAsSeller"));
 const SellerApplications = lazy(() => import("../pages/Admin/SellerApplications"));
+const FAQs = lazy(() => import("../pages/Info/FAQs"));
+const Shipping = lazy(() => import("../pages/Info/Shipping"));
+const Returns = lazy(() => import("../pages/Info/Returns"));
+const Careers = lazy(() => import("../pages/Info/Careers"));
+const Terms = lazy(() => import("../pages/Info/Terms"));
+const Privacy = lazy(() => import("../pages/Info/Privacy"));
 
 export function AppRouter() {
   return (
@@ -68,6 +74,12 @@ export function AppRouter() {
           <Route path="cart" element={<Cart />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="faqs" element={<FAQs />} />
+          <Route path="shipping" element={<Shipping />} />
+          <Route path="returns" element={<Returns />} />
+          <Route path="careers" element={<Careers />} />
+          <Route path="terms" element={<Terms />} />
+          <Route path="privacy" element={<Privacy />} />
           <Route path="sell-on-shopease" element={<ApplyAsSeller />} />
           {/* Protected Routes */}
           <Route
