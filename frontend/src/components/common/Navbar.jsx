@@ -153,13 +153,20 @@ const Navbar = () => {
 
             {user ? (
               <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                >
                   <FaUser size={16} />
                   <span className="font-medium">
                     {user?.name?.split(" ")[0] || "Unknown"}
                   </span>
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200">
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200"
+                >
                   <Link
                     to="/profile"
                     className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"

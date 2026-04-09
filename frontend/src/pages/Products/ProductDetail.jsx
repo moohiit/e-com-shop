@@ -60,7 +60,7 @@ function ProductDetail() {
     if (productData?.product && wishlist) {
       setIsInWishlist(wishlist.some(item => item._id === productData.product._id));
     }
-  }, [productData, wishlist]);
+  }, [productData?.product?._id, wishlist]);
 
   // Track recently viewed
   useEffect(() => {

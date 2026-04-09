@@ -37,9 +37,11 @@ const PaymentForm = ({ onBack, onNext }) => {
           {paymentOptions.map((option) => {
             const Icon = option.icon;
             const isSelected = paymentMethod === option.value;
+            const inputId = `payment-${option.value.replace(/\s+/g, '-').toLowerCase()}`;
             return (
               <label
                 key={option.value}
+                htmlFor={inputId}
                 className={`flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                   isSelected
                     ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
@@ -47,11 +49,13 @@ const PaymentForm = ({ onBack, onNext }) => {
                 }`}
               >
                 <input
+                  id={inputId}
                   type="radio"
                   name="paymentMethod"
                   value={option.value}
                   checked={isSelected}
                   onChange={(e) => setPaymentMethod(e.target.value)}
+                  aria-label={option.label}
                   className="sr-only"
                 />
                 <div
