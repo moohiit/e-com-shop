@@ -1,11 +1,14 @@
 import express, { urlencoded } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 
-app.use(express.json());
-app.use(urlencoded({ extended: true }))
+app.use(helmet());
+app.use(express.json({ limit: '1mb' }));
+app.use(urlencoded({ extended: true, limit: '1mb' }))
 const corsOptions = {
   origin: [process.env.CLIENT_URL, 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -14,12 +17,34 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
+// Rate limiters — protect auth/OTP from brute force and abuse
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many auth attempts. Try again later." },
+});
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many OTP requests. Try again later." },
+});
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
-// Import and use the auth routes
+// Import and use the auth routes (with brute-force protection)
 import authRoutes from './routes/authRoutes.js';
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', otpLimiter);
+app.use('/api/auth/verify-otp', otpLimiter);
+app.use('/api/auth/reset-password', otpLimiter);
+app.use('/api/auth/resend-verification', otpLimiter);
 app.use('/api/auth', authRoutes);
 // Import and use the admin routes
 import adminRoutes from './routes/adminRoutes.js';

@@ -244,7 +244,8 @@ export const sendOtp = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Cryptographically random 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
     user.otp = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000;
 
