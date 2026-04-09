@@ -75,10 +75,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Contact Info */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Full Name
           </label>
           <input
+            id="addr-fullName"
             name="fullName"
             value={form.fullName}
             onChange={handleChange}
@@ -88,10 +89,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-mobileNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Mobile Number
           </label>
           <input
+            id="addr-mobileNumber"
             name="mobileNumber"
             value={form.mobileNumber}
             onChange={handleChange}
@@ -102,10 +104,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
 
         {/* Address Info */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-flatOrBuilding" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Flat/Building
           </label>
           <input
+            id="addr-flatOrBuilding"
             name="flatOrBuilding"
             value={form.flatOrBuilding}
             onChange={handleChange}
@@ -115,10 +118,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-locality" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Locality/Street
           </label>
           <input
+            id="addr-locality"
             name="locality"
             value={form.locality}
             onChange={handleChange}
@@ -128,10 +132,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-city" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             City
           </label>
           <input
+            id="addr-city"
             name="city"
             value={form.city}
             onChange={handleChange}
@@ -141,10 +146,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-state" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             State
           </label>
           <input
+            id="addr-state"
             name="state"
             value={form.state}
             onChange={handleChange}
@@ -154,10 +160,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-country" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Country
           </label>
           <input
+            id="addr-country"
             name="country"
             value={form.country}
             onChange={handleChange}
@@ -167,10 +174,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-pincode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Pincode
           </label>
           <input
+            id="addr-pincode"
             name="pincode"
             value={form.pincode}
             onChange={handleChange}
@@ -180,10 +188,11 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-landmark" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Landmark (Optional)
           </label>
           <input
+            id="addr-landmark"
             name="landmark"
             value={form.landmark}
             onChange={handleChange}
@@ -194,7 +203,7 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor="addr-addressType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Address Type
           </label>
           <div className="relative">
@@ -202,6 +211,7 @@ const AddressForm = ({ existingAddress, onClose, refetchAddresses }) => {
               {getAddressTypeIcon()}
             </div>
             <select
+              id="addr-addressType"
               name="addressType"
               value={form.addressType}
               onChange={handleChange}

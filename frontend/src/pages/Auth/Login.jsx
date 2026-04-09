@@ -70,10 +70,12 @@ const Login = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <label className="block mb-1">Email</label>
+          <label htmlFor="login-email" className="block mb-1">Email</label>
           <input
+            id="login-email"
             {...register("email", { required: "Email is required" })}
             type="email"
+            autoComplete="email"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.email && (
@@ -82,10 +84,12 @@ const Login = () => {
         </div>
 
         <div>
-          <label className="block mb-1">Password</label>
+          <label htmlFor="login-password" className="block mb-1">Password</label>
           <input
+            id="login-password"
             {...register("password", { required: "Password is required" })}
             type="password"
+            autoComplete="current-password"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.password && (

@@ -35,38 +35,45 @@ const Register = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <label className="block mb-1">Name</label>
+          <label htmlFor="register-name" className="block mb-1">Name</label>
           <input
+            id="register-name"
             {...register('name', { required: 'Name is required' })}
             type="text"
+            autoComplete="name"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block mb-1">Email</label>
+          <label htmlFor="register-email" className="block mb-1">Email</label>
           <input
+            id="register-email"
             {...register('email', { required: 'Email is required' })}
             type="email"
+            autoComplete="email"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
         </div>
 
         <div>
-          <label className="block mb-1">Password</label>
+          <label htmlFor="register-password" className="block mb-1">Password</label>
           <input
+            id="register-password"
             {...register('password', { required: 'Password is required' })}
             type="password"
+            autoComplete="new-password"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
           />
           {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
         </div>
 
         <div>
-          <label className="block mb-1">Role (optional)</label>
+          <label htmlFor="register-role" className="block mb-1">Role (optional)</label>
           <select
+            id="register-role"
             {...register('role')}
             className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
             defaultValue="user"
