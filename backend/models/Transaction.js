@@ -12,7 +12,7 @@ const transactionSchema = new mongoose.Schema(
       ref: "Order",
       required: true,
     },
-    paymentId: { type: String, required: true }, // From payment gateway
+    paymentId: { type: String, required: true, unique: true, index: true }, // From payment gateway — must be unique for idempotency
     paymentMethod: { type: String, required: true }, // Stripe, Razorpay, PayPal, etc.
     status: { type: String, required: true }, // success, pending, failed
     amount: { type: Number, required: true },

@@ -40,6 +40,7 @@ export const initiateRazorpayPayment = async (req, res) => {
 
 // Verify Razorpay Payment AND Create Order (payment-first flow)
 export const verifyAndCreateOrder = async (req, res) => {
+  const stockAdjustments = [];
   try {
     const {
       razorpayOrderId,
@@ -64,53 +65,94 @@ export const verifyAndCreateOrder = async (req, res) => {
       return res.status(400).json({ message: "Payment verification failed" });
     }
 
-    // 2. Validate products and adjust stock (same logic as createOrder)
-    const { orderItems, shippingAddress, paymentMethod, itemsPrice, totalDiscount, shippingPrice, taxPrice, totalPrice } = orderData;
+    // 1b. Idempotency: a payment can only be processed once
+    const existingTx = await Transaction.findOne({ paymentId: razorpayPaymentId });
+    if (existingTx) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment already processed",
+        order: existingTx.order,
+        transactionId: existingTx._id,
+      });
+    }
+
+    // 2. Validate products and atomically reserve stock
+    const { orderItems, shippingAddress, paymentMethod, shippingPrice = 0 } = orderData;
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ success: false, message: "No order items" });
     }
+
+    // Server-side recompute of all monetary totals
+    let calculatedItemsPrice = 0;
+    let calculatedTotalDiscount = 0;
+    let calculatedTaxPrice = 0;
+    let calculatedItemsTotal = 0;
+    const normalizedItems = [];
 
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
       if (!product) {
         return res.status(404).json({ success: false, message: `Product not found: ${item.name}` });
       }
-      if (product.stock < item.quantity) {
+
+      // Atomic conditional decrement (prevents oversell race)
+      const reserved = await Product.findOneAndUpdate(
+        { _id: item.product, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+      if (!reserved) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for: ${item.name}. Available: ${product.stock}`,
+          message: `Insufficient stock for: ${product.name}`,
         });
       }
-      product.stock -= item.quantity;
-      await product.save();
+      stockAdjustments.push({ id: item.product, qty: item.quantity });
+
+      // Trust ONLY server-side numbers
+      const basePrice = product.basePrice;
+      const discountAmount = product.discountAmount;
+      const taxAmount = product.taxAmount;
+      const finalPrice = product.finalPrice;
+
+      calculatedItemsPrice += basePrice * item.quantity;
+      calculatedTotalDiscount += discountAmount * item.quantity;
+      calculatedTaxPrice += taxAmount * item.quantity;
+      calculatedItemsTotal += finalPrice * item.quantity;
+
+      normalizedItems.push({
+        product: item.product,
+        name: product.name,
+        quantity: item.quantity,
+        price: finalPrice,
+        basePrice,
+        discountPercentage: product.discountPercentage,
+        discountAmount,
+        taxPercentage: product.taxPercentage,
+        taxAmount,
+        seller: product.seller,
+      });
     }
 
-    // 3. Create DB Order
+    const calculatedTotalPrice = +(calculatedItemsTotal + Number(shippingPrice || 0)).toFixed(2);
+
+    // 3. Create DB Order using server-computed values
     const order = new Order({
       user: userId,
-      orderItems: orderItems.map((item) => ({
-        product: item.product,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        basePrice: item.basePrice,
-        discountPercentage: item.discountPercentage,
-        discountAmount: item.discountAmount,
-        taxPercentage: item.taxPercentage,
-        taxAmount: item.taxAmount,
-        seller: item.seller,
+      orderItems: normalizedItems.map((item) => ({
+        ...item,
         orderStatus: "Processing",
         isCancelled: false,
         isDelivered: false,
       })),
       shippingAddress,
       paymentMethod,
-      itemsPrice,
-      totalDiscount,
-      shippingPrice,
-      taxPrice,
-      totalPrice,
+      itemsPrice: +calculatedItemsPrice.toFixed(2),
+      totalDiscount: +calculatedTotalDiscount.toFixed(2),
+      shippingPrice: Number(shippingPrice || 0),
+      taxPrice: +calculatedTaxPrice.toFixed(2),
+      totalPrice: calculatedTotalPrice,
       isPaid: true,
       paidAt: new Date(),
     });
@@ -119,9 +161,10 @@ export const verifyAndCreateOrder = async (req, res) => {
 
     // 4. Create Seller Orders
     const sellerGroups = {};
-    orderItems.forEach((item) => {
-      if (!sellerGroups[item.seller]) sellerGroups[item.seller] = [];
-      sellerGroups[item.seller].push(item);
+    normalizedItems.forEach((item) => {
+      const key = item.seller.toString();
+      if (!sellerGroups[key]) sellerGroups[key] = [];
+      sellerGroups[key].push(item);
     });
 
     const sellerOrderIds = [];
@@ -152,10 +195,10 @@ export const verifyAndCreateOrder = async (req, res) => {
           isCancelled: false,
           isDelivered: false,
         })),
-        itemsPrice: sellerItemsPrice,
-        totalDiscount: sellerTotalDiscount,
-        taxPrice: sellerTaxPrice,
-        totalPrice: sellerTotalPrice,
+        itemsPrice: +sellerItemsPrice.toFixed(2),
+        totalDiscount: +sellerTotalDiscount.toFixed(2),
+        taxPrice: +sellerTaxPrice.toFixed(2),
+        totalPrice: +sellerTotalPrice.toFixed(2),
         isPaid: true,
         paidAt: new Date(),
       });
@@ -163,17 +206,16 @@ export const verifyAndCreateOrder = async (req, res) => {
       const savedSellerOrder = await sellerOrder.save();
       sellerOrderIds.push(savedSellerOrder._id);
 
-      // Create seller transaction
+      // Create seller transaction (no raw payment payload persisted)
       await SellerTransaction.create({
         seller: sellerId,
         sellerOrder: savedSellerOrder._id,
         paymentId: razorpayPaymentId,
         paymentMethod: "Razorpay",
         status: "success",
-        amount: sellerTotalPrice,
+        amount: +sellerTotalPrice.toFixed(2),
         currency: "INR",
         paymentTime: new Date(),
-        rawResponse: req.body,
       });
     }
 
@@ -187,11 +229,10 @@ export const verifyAndCreateOrder = async (req, res) => {
       paymentId: razorpayPaymentId,
       paymentMethod: "Razorpay",
       status: "success",
-      amount: totalPrice,
+      amount: calculatedTotalPrice,
       currency: "INR",
       email,
       paymentTime: new Date(),
-      rawResponse: req.body,
     });
 
     createdOrder.transaction = transaction._id;
@@ -216,7 +257,15 @@ export const verifyAndCreateOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Verify and create order error:", error);
-    res.status(500).json({ message: error.message || "Failed to verify payment and create order" });
+    // Best-effort rollback of any stock we already decremented
+    for (const adj of stockAdjustments) {
+      try {
+        await Product.findByIdAndUpdate(adj.id, { $inc: { stock: adj.qty } });
+      } catch (rbErr) {
+        console.error("Stock rollback failed for", adj.id, rbErr.message);
+      }
+    }
+    res.status(500).json({ message: "Failed to verify payment and create order" });
   }
 };
 
@@ -262,6 +311,15 @@ export const verifyRazorpayPayment = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    // Ownership check — caller must own this order
+    if (order.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Not authorized for this order" });
+    }
+
+    if (order.isPaid) {
+      return res.status(400).json({ message: "Order is already paid" });
+    }
+
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(razorpayOrderId + "|" + razorpayPaymentId)
@@ -269,6 +327,16 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     if (generatedSignature !== razorpaySignature) {
       return res.status(400).json({ message: "Payment verification failed" });
+    }
+
+    // Idempotency: this paymentId can only succeed once
+    const existingTx = await Transaction.findOne({ paymentId: razorpayPaymentId });
+    if (existingTx) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment already processed",
+        transactionId: existingTx._id,
+      });
     }
 
     const transaction = await Transaction.create({
@@ -281,7 +349,6 @@ export const verifyRazorpayPayment = async (req, res) => {
       currency: "INR",
       email,
       paymentTime: new Date(),
-      rawResponse: req.body,
     });
 
     order.isPaid = true;
@@ -300,7 +367,6 @@ export const verifyRazorpayPayment = async (req, res) => {
         amount: sellerOrder.totalPrice,
         currency: "INR",
         paymentTime: new Date(),
-        rawResponse: req.body,
       });
 
       sellerOrder.isPaid = true;
@@ -329,6 +395,14 @@ export const getTransactionById = async (req, res) => {
       { path: "user", select: "name email" },
     ]);
     if (!transaction) return res.status(404).json({ message: "Transaction not found" });
+
+    // Ownership / role check — caller must own this transaction or be admin
+    const isOwner = transaction.user?._id?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: "Not authorized to view this transaction" });
+    }
+
     res.json({ success: true, transaction });
   } catch (error) {
     console.error(error);
@@ -339,11 +413,29 @@ export const getTransactionById = async (req, res) => {
 // Get all transactions (Admin)
 export const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find().populate([
-      { path: "order", select: "totalPrice isPaid orderStatus paidAt" },
-      { path: "user", select: "name email" },
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+    const skip = (page - 1) * limit;
+
+    const [transactions, total] = await Promise.all([
+      Transaction.find()
+        .populate([
+          { path: "order", select: "totalPrice isPaid orderStatus paidAt" },
+          { path: "user", select: "name email" },
+        ])
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Transaction.countDocuments(),
     ]);
-    res.json({ success: true, transactions });
+
+    res.json({
+      success: true,
+      transactions,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get transactions" });

@@ -6,18 +6,17 @@ import sendEmail from "../utils/sendEmail.js";
 import { orderConfirmationEmail, orderCancelledEmail } from "../utils/emailTemplates.js";
 import { processRefund } from "./refundController.js";
 
+// Server-side shipping rule (single source of truth)
+const computeShipping = (itemsTotalAfterTax) => (itemsTotalAfterTax > 500 ? 0 : 50);
+
 // 🚀 Create Order with Seller Orders
 export const createOrder = async (req, res) => {
+  const stockAdjustments = [];
   try {
     const {
       orderItems,
       shippingAddress,
       paymentMethod,
-      itemsPrice,
-      totalDiscount,
-      shippingPrice,
-      taxPrice,
-      totalPrice,
     } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
@@ -26,129 +25,90 @@ export const createOrder = async (req, res) => {
         .json({ success: false, message: "No order items" });
     }
 
-    // Validate products and adjust stock
+    // Server-side recompute of all monetary fields. Client-supplied prices are ignored.
     let calculatedItemsPrice = 0;
     let calculatedTotalDiscount = 0;
     let calculatedTaxPrice = 0;
-    let calculatedTotalPrice = 0;
-    
+    let calculatedItemsTotal = 0;
+    const normalizedItems = [];
+
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
       if (!product) {
         return res
           .status(404)
-          .json({ success: false, message: `Product not found: ${item.name}` });
+          .json({ success: false, message: `Product not found` });
       }
-      
-      if (product.stock < item.quantity) {
+
+      // Atomic conditional decrement to prevent oversell race
+      const reserved = await Product.findOneAndUpdate(
+        { _id: item.product, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+      if (!reserved) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for: ${item.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+          message: `Insufficient stock for: ${product.name}`,
         });
       }
-      
-      // Calculate expected values based on product data
-      const expectedBasePrice = product.basePrice;
-      const expectedDiscountAmount = product.discountAmount;
-      const expectedTaxAmount = product.taxAmount;
-      const expectedFinalPrice = product.finalPrice;
-      
-      // Validate provided prices match product calculations
-      if (item.basePrice !== expectedBasePrice) {
-        return res.status(400).json({
-          success: false,
-          message: `Base price mismatch for: ${item.name}. Expected ₹${expectedBasePrice}, got ₹${item.basePrice}`,
-        });
-      }
-      
-      if (item.price !== expectedFinalPrice) {
-        return res.status(400).json({
-          success: false,
-          message: `Final price mismatch for: ${item.name}. Expected ₹${expectedFinalPrice}, got ₹${item.price}`,
-        });
-      }
-      
-      // Update calculated totals
-      calculatedItemsPrice += expectedBasePrice * item.quantity;
-      calculatedTotalDiscount += expectedDiscountAmount * item.quantity;
-      calculatedTaxPrice += expectedTaxAmount * item.quantity;
-      calculatedTotalPrice += expectedFinalPrice * item.quantity;
-      
-      // Update product stock
-      product.stock -= item.quantity;
-      await product.save();
+      stockAdjustments.push({ id: item.product, qty: item.quantity });
+
+      const basePrice = product.basePrice;
+      const discountAmount = product.discountAmount;
+      const taxAmount = product.taxAmount;
+      const finalPrice = product.finalPrice;
+
+      calculatedItemsPrice += basePrice * item.quantity;
+      calculatedTotalDiscount += discountAmount * item.quantity;
+      calculatedTaxPrice += taxAmount * item.quantity;
+      calculatedItemsTotal += finalPrice * item.quantity;
+
+      normalizedItems.push({
+        product: item.product,
+        name: product.name,
+        quantity: item.quantity,
+        price: finalPrice,
+        basePrice,
+        discountPercentage: product.discountPercentage,
+        discountAmount,
+        taxPercentage: product.taxPercentage,
+        taxAmount,
+        seller: product.seller,
+      });
     }
 
-    // Add shipping price to calculated total
-    calculatedTotalPrice += shippingPrice;
-
-    // Validate provided prices match calculations
-    const tolerance = 0.01; // Allow for small rounding differences
-    
-    if (Math.abs(calculatedItemsPrice - itemsPrice) > tolerance) {
-      return res.status(400).json({
-        success: false,
-        message: `Items price validation failed. Expected: ₹${calculatedItemsPrice.toFixed(2)}, Got: ₹${itemsPrice.toFixed(2)}`,
-      });
-    }
-    
-    if (Math.abs(calculatedTotalDiscount - totalDiscount) > tolerance) {
-      return res.status(400).json({
-        success: false,
-        message: `Discount validation failed. Expected: ₹${calculatedTotalDiscount.toFixed(2)}, Got: ₹${totalDiscount.toFixed(2)}`,
-      });
-    }
-    
-    if (Math.abs(calculatedTaxPrice - taxPrice) > tolerance) {
-      return res.status(400).json({
-        success: false,
-        message: `Tax validation failed. Expected: ₹${calculatedTaxPrice.toFixed(2)}, Got: ₹${taxPrice.toFixed(2)}`,
-      });
-    }
-    
-    if (Math.abs(calculatedTotalPrice - totalPrice) > tolerance) {
-      return res.status(400).json({
-        success: false,
-        message: `Total price validation failed. Expected: ₹${calculatedTotalPrice.toFixed(2)}, Got: ₹${totalPrice.toFixed(2)}`,
-      });
-    }
+    const shippingPrice = computeShipping(calculatedItemsTotal);
+    const calculatedTotalPrice = +(calculatedItemsTotal + shippingPrice).toFixed(2);
 
     // Create Main Order
     const order = new Order({
       user: req.user._id,
-      orderItems: orderItems.map((item) => ({
-        product: item.product,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        basePrice: item.basePrice,
-        discountPercentage: item.discountPercentage,
-        discountAmount: item.discountAmount,
-        taxPercentage: item.taxPercentage,
-        taxAmount: item.taxAmount,
-        seller: item.seller,
+      orderItems: normalizedItems.map((item) => ({
+        ...item,
         orderStatus: "Processing",
         isCancelled: false,
         isDelivered: false,
       })),
       shippingAddress,
       paymentMethod,
-      itemsPrice,
-      totalDiscount,
+      itemsPrice: +calculatedItemsPrice.toFixed(2),
+      totalDiscount: +calculatedTotalDiscount.toFixed(2),
       shippingPrice,
-      taxPrice,
-      totalPrice,
+      taxPrice: +calculatedTaxPrice.toFixed(2),
+      totalPrice: calculatedTotalPrice,
     });
 
     const createdOrder = await order.save();
 
     // Create Seller Orders
     const sellerGroups = {};
-    orderItems.forEach((item) => {
-      if (!sellerGroups[item.seller]) {
-        sellerGroups[item.seller] = [];
+    normalizedItems.forEach((item) => {
+      const key = item.seller.toString();
+      if (!sellerGroups[key]) {
+        sellerGroups[key] = [];
       }
-      sellerGroups[item.seller].push(item);
+      sellerGroups[key].push(item);
     });
 
     const sellerOrders = [];
@@ -226,9 +186,17 @@ export const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Order creation error:", error);
+    // Best-effort rollback of any stock we already decremented
+    for (const adj of stockAdjustments) {
+      try {
+        await Product.findByIdAndUpdate(adj.id, { $inc: { stock: adj.qty } });
+      } catch (rbErr) {
+        console.error("Stock rollback failed for", adj.id, rbErr.message);
+      }
+    }
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to create order",
+      message: "Failed to create order",
     });
   }
 };
@@ -504,11 +472,18 @@ export const cancelOrderItem = async (req, res) => {
 
     await order.save();
 
-    // Auto-refund for paid online orders
+    // Auto-refund for paid online orders.
+    // Refund = item value (price * qty). If this cancellation is the LAST active
+    // item in the order, also refund the shipping charge (the order is fully cancelled).
     let refundInfo = null;
     if (order.isPaid && order.paymentMethod !== "Cash on Delivery") {
-      const refundAmount = orderItem.price * orderItem.quantity;
-      const result = await processRefund(order._id, refundAmount);
+      let refundAmount = orderItem.price * orderItem.quantity;
+      const stillActive = order.orderItems.some((it) => !it.isCancelled);
+      if (!stillActive) {
+        refundAmount += order.shippingPrice || 0;
+      }
+      refundAmount = +refundAmount.toFixed(2);
+      const result = await processRefund(order._id, refundAmount, req.user);
       refundInfo = result.success
         ? { refunded: true, refundId: result.refundId, amount: refundAmount }
         : { refunded: false, message: result.message };
