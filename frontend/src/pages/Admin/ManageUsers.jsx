@@ -104,7 +104,8 @@ function ManageUsers() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded shadow">
+          {/* Desktop / tablet table */}
+          <div className="hidden md:block overflow-x-auto rounded shadow">
             <table className="min-w-full bg-white dark:bg-gray-800 border">
               <thead className="bg-gray-100 dark:bg-gray-700 text-sm font-semibold text-left">
                 <tr>
@@ -151,6 +152,46 @@ function ManageUsers() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile stacked cards */}
+          <div className="md:hidden space-y-3">
+            {data?.users?.map((user, idx) => (
+              <div
+                key={user._id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-sm dark:text-gray-200"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{user.name}</p>
+                    <p className="text-gray-500 text-xs truncate">{user.email}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">#{(page - 1) * limit + idx + 1}</span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs mb-3">
+                  <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 capitalize">{user.role}</span>
+                  {user.isActive ? (
+                    <span className="px-2 py-0.5 rounded bg-green-100 text-green-700">Active</span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded bg-red-100 text-red-700">Inactive</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleToggle(user._id)}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded text-xs"
+                  >
+                    {user.isActive ? "Deactivate" : "Reactivate"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user._id)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Pagination */}

@@ -40,15 +40,16 @@ const ProductCard = ({ product }) => {
     >
       <div className="relative group">
         <LazyLoadImage
-          src={product.images[0].imageUrl}
+          src={product.images?.[0]?.imageUrl || "/placeholder-image.jpg"}
           alt={product.name}
           className="w-full h-56 object-cover"
           effect=""
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
           <button
             onClick={handleAddToWishlist}
             disabled={wishlistLoading}
+            aria-label="Add to wishlist"
             title="Add to Wishlist"
             className="bg-white p-2 rounded-full hover:bg-red-500 text-gray-500 hover:text-white transition-colors disabled:opacity-50"
           >
@@ -57,6 +58,7 @@ const ProductCard = ({ product }) => {
 
           <Link
             to={`/product/${product._id}`}
+            aria-label={`View details for ${product.name}`}
             title="View Details"
             className="bg-white p-2 rounded-full hover:bg-green-500 text-gray-500 hover:text-white transition-colors"
           >
@@ -66,6 +68,7 @@ const ProductCard = ({ product }) => {
           <button
             onClick={handleAddToCart}
             disabled={cartLoading}
+            aria-label="Add to cart"
             title="Add to Cart"
             className="bg-white p-2 rounded-full hover:bg-blue-500 text-gray-500 hover:text-white transition-colors disabled:opacity-50"
           >
@@ -77,19 +80,21 @@ const ProductCard = ({ product }) => {
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-1 truncate">{product.name}</h3>
         <div className="flex justify-between items-center">
-          {product.discountPrice ? (
+          {product.discountPercentage > 0 ? (
             <div className="flex gap-2 items-center">
               <span className="text-lg font-bold text-red-500">
-                ₹{product.discountPrice}
+                ₹{product.finalPrice?.toFixed?.(2) ?? product.finalPrice}
               </span>
               <span className="text-sm text-gray-500 line-through">
-                ₹{product.price}
+                ₹{product.basePrice?.toFixed?.(2) ?? product.basePrice}
               </span>
             </div>
           ) : (
-            <span className="text-lg font-bold">₹{product.price}</span>
+            <span className="text-lg font-bold">
+              ₹{product.finalPrice?.toFixed?.(2) ?? product.basePrice}
+            </span>
           )}
-          <span className="text-sm text-gray-500">{product.rating || 0} ★</span>
+          <span className="text-sm text-gray-500">{(product.ratingsAverage ?? 0)} ★</span>
         </div>
       </div>
     </motion.div>

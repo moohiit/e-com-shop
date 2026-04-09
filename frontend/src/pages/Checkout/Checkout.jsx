@@ -158,13 +158,32 @@ const Checkout = () => {
       animate={{ opacity: 1 }}
       className="container mx-auto px-4 py-12"
     >
-      <Stepper activeStep={activeStep} alternativeLabel className="mb-8">
-        {steps.map((label, index) => (
-          <Step key={index}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+      {/* Mobile: simple "Step X of Y" indicator. Desktop: full stepper. */}
+      <div className="sm:hidden mb-6 text-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Step {activeStep + 1} of {steps.length}
+        </p>
+        <p className="text-base font-semibold mt-1">{steps[activeStep]}</p>
+        <div className="flex gap-1 justify-center mt-3">
+          {steps.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 w-8 rounded-full ${
+                i <= activeStep ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="hidden sm:block">
+        <Stepper activeStep={activeStep} alternativeLabel className="mb-8">
+          {steps.map((label, index) => (
+            <Step key={index}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </div>
 
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
         {getStepContent(activeStep)}
