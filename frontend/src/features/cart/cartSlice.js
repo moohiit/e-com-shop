@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { logoutUser } from "../auth/authSlice";
 
 const defaultState = {
   items: [],
@@ -8,9 +9,21 @@ const defaultState = {
   paymentMethod: null,
 };
 
+// Cart key is scoped per user so switching accounts never leaks items.
+const cartKey = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      if (payload?.id) return `cart_${payload.id}`;
+    }
+  } catch {}
+  return "cart_guest";
+};
+
 const loadCartFromStorage = () => {
   try {
-    const stored = localStorage.getItem("cart");
+    const stored = localStorage.getItem(cartKey());
     return stored ? JSON.parse(stored) : { ...defaultState };
   } catch {
     return { ...defaultState };
@@ -18,7 +31,7 @@ const loadCartFromStorage = () => {
 };
 
 const saveCartToStorage = (state) => {
-  localStorage.setItem("cart", JSON.stringify(state));
+  localStorage.setItem(cartKey(), JSON.stringify(state));
 };
 
 const recalcTotals = (state) => {
@@ -95,6 +108,25 @@ const cartSlice = createSlice({
       recalcTotals(state);
       saveCartToStorage(state);
     },
+    // Re-load cart from localStorage for the current user (call after login)
+    reloadCartForUser: (state) => {
+      const loaded = loadCartFromStorage();
+      state.items = loaded.items || [];
+      state.totalQuantity = loaded.totalQuantity || 0;
+      state.totalAmount = loaded.totalAmount || 0;
+      state.shippingAddress = loaded.shippingAddress || null;
+      state.paymentMethod = loaded.paymentMethod || null;
+    },
+  },
+  extraReducers: (builder) => {
+    // On logout, reset cart state to empty (next login will load that user's cart)
+    builder.addCase(logoutUser.fulfilled, (state) => {
+      state.items = [];
+      state.totalQuantity = 0;
+      state.totalAmount = 0;
+      state.shippingAddress = null;
+      state.paymentMethod = null;
+    });
   },
 });
 
@@ -106,6 +138,7 @@ export const {
   savePaymentMethod,
   clearCart,
   setCartFromServer,
+  reloadCartForUser,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

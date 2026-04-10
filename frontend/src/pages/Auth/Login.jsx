@@ -8,6 +8,8 @@ import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../features/auth/authSlice";
+import { reloadCartForUser } from "../../features/cart/cartSlice";
+import { reloadWishlistForUser } from "../../features/wishlist/wishlistSlice";
 import { useState } from "react";
 
 const Login = () => {
@@ -40,6 +42,9 @@ const Login = () => {
         throw new Error("Email not verified. Please verify your email.");
       }
       dispatch(loginSuccess(response));
+      // Reload cart & wishlist from the new user's scoped localStorage
+      dispatch(reloadCartForUser());
+      dispatch(reloadWishlistForUser());
       toast.success(response.message || "Logged in successfully!");
       navigate("/");
     } catch (err) {
