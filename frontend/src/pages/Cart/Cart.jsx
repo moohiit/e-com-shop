@@ -1,34 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
 import {
   selectCartItems,
-  selectCartTotalAmount,
   selectCartTotalQuantity,
   addItem,
   removeItem,
   deleteItem,
   clearCart,
   setCartFromServer,
-} from '../../features/cart/cartSlice';
-import { addToWishlist } from '../../features/wishlist/wishlistSlice';
-import { useAddToWishlistApiMutation } from '../../features/wishlist/wishlistApiSlice';
+} from "../../features/cart/cartSlice";
+import { addToWishlist } from "../../features/wishlist/wishlistSlice";
+import { useAddToWishlistApiMutation } from "../../features/wishlist/wishlistApiSlice";
 import {
   useGetCartQuery,
   useSyncCartMutation,
   useRemoveFromCartApiMutation,
   useClearCartApiMutation,
-} from '../../features/cart/cartApiSlice';
-import { useGetProductByIdQuery } from '../../features/products/productApiSlice';
-import { toast } from 'react-hot-toast';
-import AccessDenied from '../../components/common/AccessDenied';
-import { FaExclamationTriangle, FaHeart, FaTrash } from 'react-icons/fa';
-import { calculateCartPricing, calculateLinePricing } from '../../utils/pricing';
+} from "../../features/cart/cartApiSlice";
+import { toast } from "react-hot-toast";
+import AccessDenied from "../../components/common/AccessDenied";
+import {
+  calculateCartPricing,
+  calculateLinePricing,
+  FREE_SHIPPING_THRESHOLD,
+  FLAT_SHIPPING_FEE,
+} from "../../utils/pricing";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  Heart,
+  ShoppingBag,
+  Truck,
+  ShieldCheck,
+  Tag,
+  ChevronRight,
+  AlertTriangle,
+  Package,
+} from "lucide-react";
 
 function Cart() {
   const { user } = useSelector((state) => state.auth);
   const cartItems = useSelector(selectCartItems);
-  const totalAmount = useSelector(selectCartTotalAmount);
   const totalQuantity = useSelector(selectCartTotalQuantity);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -38,15 +52,14 @@ function Cart() {
   const [removeFromCartApi] = useRemoveFromCartApiMutation();
   const [clearCartApi] = useClearCartApiMutation();
   const [addToWishlistApi] = useAddToWishlistApiMutation();
-  const [outOfStockItems, setOutOfStockItems] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // Sync cart with backend on login
   useEffect(() => {
     if (user && serverCart?.items) {
       if (cartItems.length > 0 && serverCart.items.length === 0) {
-        // Push local cart to server
-        const items = cartItems.map((i) => ({ product: i._id, quantity: i.quantity }));
+        const items = cartItems.map((i) => ({
+          product: i._id,
+          quantity: i.quantity,
+        }));
         syncCart(items).catch(() => {});
       } else if (serverCart.items.length > 0) {
         dispatch(setCartFromServer(serverCart.items));
@@ -55,50 +68,13 @@ function Cart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverCart, user]);
 
-  if (user?.role === 'seller' || user?.role === 'admin') {
+  if (user?.role === "seller" || user?.role === "admin") {
     return <AccessDenied />;
   }
 
-  // Check for out of stock items
-  useEffect(() => {
-    const checkStockAvailability = async () => {
-      setLoading(true);
-      const outOfStock = [];
-      
-      for (const item of cartItems) {
-        try {
-          // Fetch current product data to check stock
-          const { data: product } = await dispatch(
-            useGetProductByIdQuery.initiate(item._id)
-          );
-          
-          if (product && product.stock < item.quantity) {
-            outOfStock.push({
-              ...item,
-              availableStock: product.stock
-            });
-          }
-        } catch (error) {
-          console.error('Error checking stock for product:', item._id, error);
-          // If we can't verify stock, assume it's available
-        }
-      }
-      
-      setOutOfStockItems(outOfStock);
-      setLoading(false);
-    };
-
-    if (cartItems.length > 0) {
-      checkStockAvailability();
-    } else {
-      setLoading(false);
-    }
-  }, [cartItems, dispatch]);
-
   const handleIncrease = (item) => {
-    // Check if we can add more (stock limit)
     if (item.quantity >= (item.stock || 99)) {
-      toast.error(`Only ${item.stock} items available in stock`);
+      toast.error(`Only ${item.stock} items available`);
       return;
     }
     dispatch(addItem(item));
@@ -107,7 +83,7 @@ function Cart() {
   const handleDecrease = (item) => {
     if (item.quantity === 1) {
       dispatch(deleteItem(item._id));
-      toast.success('Item removed from cart');
+      toast.success("Item removed");
     } else {
       dispatch(removeItem(item._id));
     }
@@ -116,7 +92,7 @@ function Cart() {
   const handleRemove = (id) => {
     dispatch(deleteItem(id));
     if (user) removeFromCartApi(id).catch(() => {});
-    toast.success('Item removed from cart');
+    toast.success("Item removed");
   };
 
   const handleMoveToWishlist = (item) => {
@@ -126,225 +102,350 @@ function Cart() {
       removeFromCartApi(item._id).catch(() => {});
       addToWishlistApi(item._id).catch(() => {});
     }
-    toast.success('Item moved to wishlist');
+    toast.success("Moved to wishlist");
   };
 
   const handleClearCart = () => {
     dispatch(clearCart());
     if (user) clearCartApi().catch(() => {});
-    toast.success('Cart cleared');
+    toast.success("Cart cleared");
   };
 
   const handleCheckout = () => {
-    if (cartItems.length === 0) return toast.error('Your cart is empty');
-    
-    // Check if there are any out of stock items
-    if (outOfStockItems.length > 0) {
-      toast.error('Please resolve out of stock items before checkout');
-      return;
-    }
-    
-    navigate('/checkout');
+    if (cartItems.length === 0) return toast.error("Your cart is empty");
+    navigate("/checkout");
   };
 
   const { itemsPrice, taxPrice, totalDiscount, shippingPrice, totalPrice } =
     calculateCartPricing(cartItems);
 
+  const amountUntilFreeShipping =
+    shippingPrice > 0 ? FREE_SHIPPING_THRESHOLD - (itemsPrice - totalDiscount + taxPrice) : 0;
+  const freeShippingProgress =
+    shippingPrice > 0
+      ? Math.min(
+          100,
+          (((itemsPrice - totalDiscount + taxPrice) / FREE_SHIPPING_THRESHOLD) * 100)
+        )
+      : 100;
+
+  // -- Empty state --
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-lg">
-        <p>Your cart is empty.</p>
-        <Link
-          to="/products"
-          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Continue Shopping
-        </Link>
+      <div className="bg-gray-50 dark:bg-gray-950 min-h-[70vh] flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <ShoppingBag size={40} className="text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Your cart is empty
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            Looks like you haven't added anything to your cart yet.
+          </p>
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            <ShoppingBag size={18} />
+            Start Shopping
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      <h2 className="text-3xl font-bold mb-6">Your Cart</h2>
-
-      {/* Out of Stock Warning Banner */}
-      {outOfStockItems.length > 0 && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
-          <div className="flex items-center">
-            <FaExclamationTriangle className="mr-2" />
-            <span className="font-semibold">Attention required!</span>
+    <div className="bg-gray-50 dark:bg-gray-950 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+              Shopping Cart
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {totalQuantity} item{totalQuantity !== 1 ? "s" : ""} in your cart
+            </p>
           </div>
-          <p className="mt-1">
-            {outOfStockItems.length} item(s) in your cart are out of stock or have limited availability.
-          </p>
+          <button
+            type="button"
+            onClick={handleClearCart}
+            className="text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+          >
+            Clear cart
+          </button>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Cart Items */}
-        <div className="md:col-span-2 space-y-4">
-          {cartItems.map((item) => {
-            const {
-              basePriceLine: basePrice,
-              discountAmountLine: discountAmount,
-              taxAmountLine: taxAmount,
-              itemTotal,
-            } = calculateLinePricing(item);
-
-            return (
+        {/* Free shipping progress bar */}
+        {shippingPrice > 0 && (
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Truck size={18} className="text-blue-600 dark:text-blue-400" />
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Add{" "}
+                <span className="font-bold text-blue-600 dark:text-blue-400">
+                  ₹{amountUntilFreeShipping.toFixed(0)}
+                </span>{" "}
+                more for <strong>free delivery!</strong>
+              </p>
+            </div>
+            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
-                key={item._id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-4 gap-4"
-              >
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  <img
-                    src={item.images[0]?.imageUrl || "/placeholder-image.jpg"}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-lg"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
-                    {/* Categories */}
-                    {item.categories && item.categories.length > 0 && (
-                      <div className="mb-2">
-                        <div className="flex flex-wrap gap-1">
-                          {item.categories.slice(0, 2).map((category) => (
-                            <span
-                              key={category._id}
-                              className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"
-                            >
-                              {category.name}
-                            </span>
-                          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Cart items */}
+          <div className="lg:col-span-8 space-y-4">
+            {cartItems.map((item) => {
+              const {
+                basePriceLine: basePrice,
+                discountAmountLine: discountAmount,
+                taxAmountLine: taxAmount,
+                itemTotal,
+              } = calculateLinePricing(item);
+              const unitFinal = Number(item.finalPrice ?? item.basePrice ?? 0);
+              const hasDiscount = (item.discountPercentage || 0) > 0;
+
+              return (
+                <div
+                  key={item._id}
+                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-5"
+                >
+                  <div className="flex gap-4">
+                    {/* Image */}
+                    <Link
+                      to={`/product/${item._id}`}
+                      className="shrink-0"
+                    >
+                      <img
+                        src={item.images?.[0]?.imageUrl || "/placeholder-image.jpg"}
+                        alt={item.name}
+                        className="w-24 h-24 md:w-28 md:h-28 rounded-xl object-cover border border-gray-100 dark:border-gray-800"
+                      />
+                    </Link>
+
+                    {/* Details */}
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {item.brand && (
+                            <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">
+                              {item.brand}
+                            </p>
+                          )}
+                          <Link
+                            to={`/product/${item._id}`}
+                            className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <h3 className="font-semibold text-sm md:text-base text-gray-900 dark:text-white line-clamp-2">
+                              {item.name}
+                            </h3>
+                          </Link>
                         </div>
-                      </div>
-                    )}
 
-                    <div className="text-gray-500 space-y-1">
-                      <p>Base Price: ₹{basePrice.toFixed(2)}</p>
-                      {discountAmount > 0 && (
-                        <p className="text-red-500">
-                          Discount ({item.discountPercentage || 0}%): ₹{discountAmount.toFixed(2)}
+                        {/* Line total — desktop */}
+                        <p className="hidden sm:block text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                          ₹{itemTotal.toFixed(2)}
                         </p>
-                      )}
-                      <p>Taxes ({item.taxPercentage || 0}%): ₹{taxAmount.toFixed(2)}</p>
-                      <p>Total Price: ₹{itemTotal.toFixed(2)}</p>
-                    </div>
+                      </div>
 
-                    {/* Stock information */}
-                    <div className="mt-1 text-sm">
-                      {item.stock > 0 ? (
-                        <span className="text-green-600">
-                          In Stock ({item.stock} available)
+                      {/* Price per unit */}
+                      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          ₹{unitFinal.toFixed(2)}
                         </span>
-                      ) : (
-                        <span className="text-red-600">Out of Stock</span>
-                      )}
-                    </div>
+                        {hasDiscount && (
+                          <>
+                            <span className="text-xs text-gray-400 line-through">
+                              ₹{(item.basePrice || 0).toFixed(2)}
+                            </span>
+                            <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                              {Math.round(item.discountPercentage)}% off
+                            </span>
+                          </>
+                        )}
+                      </div>
 
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        onClick={() => handleDecrease(item)}
-                        className="bg-gray-300 px-2 rounded hover:bg-gray-400 disabled:opacity-50"
-                        disabled={item.quantity <= 1}
-                      >
-                        -
-                      </button>
-                      <span className="font-semibold">{item.quantity}</span>
-                      <button
-                        onClick={() => handleIncrease(item)}
-                        className="bg-gray-300 px-2 rounded hover:bg-gray-400 disabled:opacity-50"
-                        disabled={item.quantity >= (item.stock || 99)}
-                      >
-                        +
-                      </button>
+                      {/* Stock badge */}
+                      <div className="mt-1">
+                        {item.stock > 0 ? (
+                          item.stock <= 5 ? (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                              <AlertTriangle size={12} /> Only {item.stock} left
+                            </p>
+                          ) : null
+                        ) : (
+                          <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                            Out of stock
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Spacer */}
+                      <div className="flex-1" />
+
+                      {/* Bottom row: qty + actions */}
+                      <div className="flex items-center justify-between mt-3 flex-wrap gap-3">
+                        {/* Quantity stepper */}
+                        <div className="flex items-center border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => handleDecrease(item)}
+                            disabled={item.quantity <= 1}
+                            aria-label="Decrease quantity"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="px-3 py-1.5 text-sm font-semibold min-w-[2.5rem] text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleIncrease(item)}
+                            disabled={item.quantity >= (item.stock || 99)}
+                            aria-label="Increase quantity"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveToWishlist(item)}
+                            aria-label="Move to wishlist"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          >
+                            <Heart size={14} /> Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item._id)}
+                            aria-label="Remove item"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={14} /> Remove
+                          </button>
+                        </div>
+
+                        {/* Line total — mobile */}
+                        <p className="sm:hidden text-base font-bold text-gray-900 dark:text-white">
+                          ₹{itemTotal.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 sm:gap-2 sm:shrink-0">
-                  <button
-                    onClick={() => handleRemove(item._id)}
-                    className="text-red-500 hover:text-red-700"
-                    title="Remove from cart"
+          {/* Order summary — sticky on desktop */}
+          <aside className="lg:col-span-4">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 md:p-6 lg:sticky lg:top-4 space-y-5">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Order Summary
+              </h2>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Subtotal ({totalQuantity} items)
+                  </span>
+                  <span className="font-medium">₹{itemsPrice.toFixed(2)}</span>
+                </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span className="flex items-center gap-1">
+                      <Tag size={13} /> Discount
+                    </span>
+                    <span className="font-medium">
+                      −₹{totalDiscount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                  <span className="font-medium">₹{taxPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Delivery
+                  </span>
+                  <span
+                    className={`font-medium ${
+                      shippingPrice === 0
+                        ? "text-green-600 dark:text-green-400"
+                        : ""
+                    }`}
                   >
-                    Remove
-                  </button>
-                  <span className="font-semibold text-lg">
-                    ₹{itemTotal.toFixed(2)}
+                    {shippingPrice === 0
+                      ? "FREE"
+                      : `₹${shippingPrice.toFixed(2)}`}
                   </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Cart Summary */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4 h-fit">
-          <h3 className="text-xl font-semibold mb-4">Cart Summary</h3>
-
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span>Total Items:</span>
-              <span>{totalQuantity}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Items Price:</span>
-              <span>₹{itemsPrice.toFixed(2)}</span>
-            </div>
-            {totalDiscount > 0 && (
-              <div className="flex justify-between text-red-500">
-                <span>Total Discount:</span>
-                <span>₹{totalDiscount.toFixed(2)}</span>
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white">
+                  <span>Total</span>
+                  <span>₹{totalPrice.toFixed(2)}</span>
+                </div>
+                {totalDiscount > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 text-right mt-1">
+                    You're saving ₹{totalDiscount.toFixed(2)} on this order!
+                  </p>
+                )}
               </div>
-            )}
-            <div className="flex justify-between">
-              <span>Tax Price:</span>
-              <span>₹{taxPrice.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Shipping Price:</span>
-              <span>{shippingPrice === 0 ? 'Free' : `₹${shippingPrice.toFixed(2)}`}</span>
-            </div>
-            <div className="border-t pt-3 mt-3">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total Amount:</span>
-                <span>₹{totalPrice.toFixed(2)}</span>
+
+              <button
+                type="button"
+                onClick={handleCheckout}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
+              >
+                Proceed to Checkout
+                <ChevronRight size={16} />
+              </button>
+
+              <Link
+                to="/products"
+                className="w-full inline-flex items-center justify-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                <ShoppingBag size={14} />
+                Continue Shopping
+              </Link>
+
+              {/* Trust badges */}
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-4 grid grid-cols-2 gap-3">
+                {[
+                  { icon: Truck, label: "Free delivery 500+" },
+                  { icon: ShieldCheck, label: "Secure checkout" },
+                  { icon: Package, label: "Easy returns" },
+                  { icon: Tag, label: "Best prices" },
+                ].map((b) => {
+                  const Icon = b.icon;
+                  return (
+                    <div
+                      key={b.label}
+                      className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400"
+                    >
+                      <Icon size={14} className="shrink-0" />
+                      <span>{b.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
-
-          <div className="space-y-3 pt-4">
-            <button
-              onClick={handleCheckout}
-              className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
-            >
-              Proceed to Checkout
-            </button>
-
-            <button
-              onClick={handleClearCart}
-              className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition-colors"
-            >
-              Clear Cart
-            </button>
-
-            <Link
-              to="/products"
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
-            >
-              Continue Shopping
-            </Link>
-          </div>
-
-          {/* Free shipping notice */}
-          {itemsPrice < 500 && (
-            <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg mt-4">
-              Add ₹{(500 - itemsPrice).toFixed(2)} more for free shipping!
-            </div>
-          )}
+          </aside>
         </div>
       </div>
     </div>
