@@ -485,7 +485,13 @@ export const cancelOrderItem = async (req, res) => {
       refundAmount = +refundAmount.toFixed(2);
       const result = await processRefund(order._id, refundAmount, req.user);
       refundInfo = result.success
-        ? { refunded: true, refundId: result.refundId, amount: refundAmount }
+        ? {
+            refunded: true,
+            refundId: result.refundId,
+            amount: refundAmount,
+            method: result.method || "original_payment",
+            message: result.message || "Refund will be credited to your original payment method within 5-7 business days.",
+          }
         : { refunded: false, message: result.message };
     }
 

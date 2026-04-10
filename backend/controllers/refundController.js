@@ -33,8 +33,13 @@ export const processRefund = async (orderId, refundAmount, actor = null) => {
       return { success: false, message: "Refund amount exceeds order total" };
     }
     if (order.paymentMethod === "Cash on Delivery") {
-      // COD orders don't need gateway refund
-      return { success: true, refundId: `COD_REFUND_${Date.now()}` };
+      // COD: no gateway refund. Track as pending bank transfer.
+      return {
+        success: true,
+        refundId: `COD_REFUND_${Date.now()}`,
+        method: "bank_transfer",
+        message: "Refund will be credited to your bank account within 5-7 business days. Our team will contact you for bank details if not already on file.",
+      };
     }
 
     const transaction = await Transaction.findOne({
@@ -53,7 +58,12 @@ export const processRefund = async (orderId, refundAmount, actor = null) => {
       }
     );
 
-    return { success: true, refundId: refund.id };
+    return {
+      success: true,
+      refundId: refund.id,
+      method: "original_payment",
+      message: "Refund will be credited to your original payment method within 5-7 business days.",
+    };
   } catch (error) {
     console.error("Razorpay refund error:", error);
     return {
