@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useUploadMultipleImagesMutation } from "../../features/upload/uploadApi";
 import { useCreateProductMutation } from "../../features/products/productApiSlice";
 import { useFetchCategoriesQuery } from "../../features/category/categoryApiSlice";
+import CategoryTreeSelect from "../../components/common/CategoryTreeSelect";
 import toast from "react-hot-toast";
 
 function AddProduct() {
@@ -208,37 +209,26 @@ function AddProduct() {
           )}
         </div>
 
-        {/* Categories Dropdown (Multiple) */}
+        {/* Categories — Cascading tree with checkboxes */}
         <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Categories
+          </label>
           <Controller
             control={control}
             name="categories"
-            rules={{ required: "At least one category is required" }}
+            rules={{
+              validate: (v) =>
+                (v && v.length > 0) || "At least one category is required",
+            }}
             render={({ field }) => (
-              <select
-                multiple
-                {...field}
-                className="w-full p-3 border rounded-md dark:bg-gray-800 dark:text-white"
+              <CategoryTreeSelect
+                categories={categoryData}
+                loading={loadingCategories}
                 value={field.value || []}
-                onChange={(e) => {
-                  const options = e.target.options;
-                  const value = [];
-                  for (let i = 0; i < options.length; i++) {
-                    if (options[i].selected) {
-                      value.push(options[i].value);
-                    }
-                  }
-                  field.onChange(value);
-                }}
-              >
-                <option value="">Select Categories (Hold Ctrl for multiple)</option>
-                {!loadingCategories &&
-                  categoryData.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.name}
-                    </option>
-                  ))}
-              </select>
+                onChange={field.onChange}
+                placeholder="Select one or more categories"
+              />
             )}
           />
           {errors.categories && (

@@ -18,50 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../../components/products/ProductCard";
 import Pagination from "../../components/common/Pagination";
-
-// ---- Category tree helpers ----
-// Build a nested tree from the flat API list using the `parents` field.
-const buildCategoryTree = (flatCategories) => {
-  const map = new Map();
-  const roots = [];
-
-  // Index every category by ID
-  for (const cat of flatCategories) {
-    map.set(cat._id, { ...cat, children: [] });
-  }
-
-  for (const cat of flatCategories) {
-    const node = map.get(cat._id);
-    const parentIds = (cat.parents || []).map((p) =>
-      typeof p === "object" ? p._id : p
-    );
-
-    if (parentIds.length === 0) {
-      roots.push(node);
-    } else {
-      for (const pid of parentIds) {
-        const parentNode = map.get(pid);
-        if (parentNode) {
-          parentNode.children.push(node);
-        } else {
-          // Parent not in the list (maybe inactive) — treat as root
-          if (!roots.includes(node)) roots.push(node);
-        }
-      }
-    }
-  }
-
-  return roots;
-};
-
-// Recursively collect all descendant IDs (for highlighting)
-const collectDescendantIds = (node) => {
-  let ids = [node._id];
-  for (const child of node.children || []) {
-    ids = ids.concat(collectDescendantIds(child));
-  }
-  return ids;
-};
+import { buildCategoryTree, collectDescendantIds } from "../../utils/categoryTree";
 
 // ---- CategoryTreeItem — renders one node + its children ----
 const CategoryTreeItem = ({
