@@ -12,10 +12,153 @@ import {
   Grid3x3,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  FolderOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../../components/products/ProductCard";
 import Pagination from "../../components/common/Pagination";
+
+// ---- Category tree helpers ----
+// Build a nested tree from the flat API list using the `parents` field.
+const buildCategoryTree = (flatCategories) => {
+  const map = new Map();
+  const roots = [];
+
+  // Index every category by ID
+  for (const cat of flatCategories) {
+    map.set(cat._id, { ...cat, children: [] });
+  }
+
+  for (const cat of flatCategories) {
+    const node = map.get(cat._id);
+    const parentIds = (cat.parents || []).map((p) =>
+      typeof p === "object" ? p._id : p
+    );
+
+    if (parentIds.length === 0) {
+      roots.push(node);
+    } else {
+      for (const pid of parentIds) {
+        const parentNode = map.get(pid);
+        if (parentNode) {
+          parentNode.children.push(node);
+        } else {
+          // Parent not in the list (maybe inactive) — treat as root
+          if (!roots.includes(node)) roots.push(node);
+        }
+      }
+    }
+  }
+
+  return roots;
+};
+
+// Recursively collect all descendant IDs (for highlighting)
+const collectDescendantIds = (node) => {
+  let ids = [node._id];
+  for (const child of node.children || []) {
+    ids = ids.concat(collectDescendantIds(child));
+  }
+  return ids;
+};
+
+// ---- CategoryTreeItem — renders one node + its children ----
+const CategoryTreeItem = ({
+  node,
+  depth = 0,
+  selectedCategory,
+  onSelect,
+}) => {
+  const hasChildren = node.children && node.children.length > 0;
+  const isSelected = selectedCategory === node._id;
+
+  // Auto-expand if this node or any descendant is selected
+  const isDescendantSelected = useMemo(() => {
+    if (!selectedCategory) return false;
+    const ids = collectDescendantIds(node);
+    return ids.includes(selectedCategory);
+  }, [selectedCategory, node]);
+
+  const [expanded, setExpanded] = useState(isDescendantSelected);
+
+  // Keep in sync when selection changes externally
+  useEffect(() => {
+    if (isDescendantSelected) setExpanded(true);
+  }, [isDescendantSelected]);
+
+  return (
+    <div>
+      <div
+        className="flex items-center group"
+        style={{ paddingLeft: `${depth * 14}px` }}
+      >
+        {/* Expand/collapse toggle */}
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            className="p-0.5 mr-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-transform"
+            aria-label={expanded ? "Collapse" : "Expand"}
+          >
+            <ChevronRight
+              size={14}
+              className={`transition-transform duration-200 ${
+                expanded ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+        ) : (
+          <span className="w-5" /> // Spacer to align leaf nodes
+        )}
+
+        {/* Category button */}
+        <button
+          type="button"
+          onClick={() => onSelect(node._id)}
+          className={`flex-1 text-left text-sm px-2 py-1.5 rounded capitalize transition-colors truncate ${
+            isSelected
+              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
+              : isDescendantSelected && !isSelected
+              ? "text-blue-600 dark:text-blue-400 font-medium"
+              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          {hasChildren && !expanded && (
+            <FolderOpen
+              size={13}
+              className="inline mr-1.5 -mt-0.5 text-gray-400 dark:text-gray-500"
+            />
+          )}
+          {node.name}
+          {hasChildren && (
+            <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500">
+              ({node.children.length})
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Children — animated expand */}
+      {hasChildren && expanded && (
+        <div className="mt-0.5">
+          {node.children.map((child) => (
+            <CategoryTreeItem
+              key={child._id}
+              node={child}
+              depth={depth + 1}
+              selectedCategory={selectedCategory}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SORT_OPTIONS = [
   { value: "latest", label: "Newest first" },
@@ -155,6 +298,7 @@ export default function ProductListing() {
   const products = productsData?.products || [];
   const pagination = productsData?.pagination || { total: 0, pages: 1, page: 1 };
   const categories = categoriesData?.categories || [];
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
 
   const activeChips = useMemo(() => {
     const chips = [];
@@ -164,10 +308,20 @@ export default function ProductListing() {
       const cat = categories.find(
         (c) => c._id === filters.category || c.slug === filters.category
       );
-      chips.push({
-        key: "category",
-        label: `Category: ${cat?.name || filters.category}`,
-      });
+      // Build breadcrumb path (e.g. "Electronics › Phones › Smartphones")
+      let label = cat?.name || filters.category;
+      if (cat?.parents?.length > 0) {
+        const parentNames = cat.parents
+          .map((p) => {
+            const parent = typeof p === "object" ? p : categories.find((c) => c._id === p);
+            return parent?.name;
+          })
+          .filter(Boolean);
+        if (parentNames.length > 0) {
+          label = `${parentNames.join(" › ")} › ${cat.name}`;
+        }
+      }
+      chips.push({ key: "category", label: `Category: ${label}` });
     }
     if (filters.brand) chips.push({ key: "brand", label: `Brand: ${filters.brand}` });
     if (filters.minPrice || filters.maxPrice) {
@@ -214,31 +368,29 @@ export default function ProductListing() {
       </div>
 
       <FilterGroup title="Categories">
-        <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+        <div className="space-y-0.5 max-h-72 overflow-y-auto pr-1">
+          {/* "All categories" reset button */}
           <button
             type="button"
             onClick={() => updateFilters({ category: "" })}
             className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
               !filters.category
-                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
-                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
           >
             All categories
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat._id}
-              type="button"
-              onClick={() => updateFilters({ category: cat._id })}
-              className={`w-full text-left text-sm px-2 py-1.5 rounded capitalize transition-colors ${
-                filters.category === cat._id
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {cat.name}
-            </button>
+
+          {/* Cascading tree */}
+          {categoryTree.map((root) => (
+            <CategoryTreeItem
+              key={root._id}
+              node={root}
+              depth={0}
+              selectedCategory={filters.category}
+              onSelect={(id) => updateFilters({ category: id })}
+            />
           ))}
         </div>
       </FilterGroup>
