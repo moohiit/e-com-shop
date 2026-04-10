@@ -20,6 +20,7 @@ import {
   FaUserPlus,
   FaTachometerAlt,
 } from "react-icons/fa";
+import { MessageCircle, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import SearchBar from "./SearchBar";
 import { logoutUser } from "../../features/auth/authSlice";
@@ -28,11 +29,31 @@ const Navbar = () => {
   const { darkMode, toggleTheme } = useTheme();
   const { user } = useSelector((state) => state.auth);
   const { items: cartItems } = useSelector((state) => state.cart);
-  const wishlistItems = useSelector((state) => state.wishlist); // Get wishlist from Redux
+  const wishlistItems = useSelector((state) => state.wishlist);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Purchase mode: stored in localStorage so it persists across page reloads
+  const [purchaseMode, setPurchaseMode] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("purchaseMode")) || false;
+    } catch {
+      return false;
+    }
+  });
+
+  const togglePurchaseMode = () => {
+    const next = !purchaseMode;
+    setPurchaseMode(next);
+    localStorage.setItem("purchaseMode", JSON.stringify(next));
+  };
+
+  // Only show purchase-mode toggle for seller and admin
+  const isNonUserRole = user?.role === "seller" || user?.role === "admin";
+  // Show shopping UI when: (a) user is role=user, or (b) purchase mode is on
+  const showShoppingUI = !user || user.role === "user" || purchaseMode;
 
   const handleLogout = () => {
     try {
@@ -44,9 +65,7 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -55,11 +74,7 @@ const Navbar = () => {
     { name: "Home", path: "/", icon: <FaHome className="mr-2" /> },
     { name: "Shop", path: "/products", icon: <FaStore className="mr-2" /> },
     { name: "About", path: "/about", icon: <FaInfoCircle className="mr-2" /> },
-    {
-      name: "Contact",
-      path: "/contact",
-      icon: <FaPhoneAlt className="mr-2" />,
-    },
+    { name: "Contact", path: "/contact", icon: <FaPhoneAlt className="mr-2" /> },
   ];
 
   return (
@@ -70,6 +85,21 @@ const Navbar = () => {
           : "bg-white dark:bg-gray-900"
       }`}
     >
+      {/* Purchase mode banner for seller/admin */}
+      {isNonUserRole && purchaseMode && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center py-1.5 text-xs font-medium">
+          <ShoppingBag size={12} className="inline mr-1" />
+          Purchase mode is active — you're shopping as a buyer.{" "}
+          <button
+            type="button"
+            onClick={togglePurchaseMode}
+            className="underline hover:no-underline font-semibold ml-1"
+          >
+            Switch back
+          </button>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -77,14 +107,12 @@ const Navbar = () => {
             <Link to="/" className="flex items-center">
               <motion.img
                 src={logo}
-                alt="E-commerce Illustration"
+                alt="ShopEase"
                 className="w-12 drop-shadow-2xl bg-transparent dark:bg-transparent"
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                style={{
-                  backgroundColor: "transparent",
-                }}
+                style={{ backgroundColor: "transparent" }}
               />
             </Link>
           </motion.div>
@@ -115,7 +143,7 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Icons */}
-          <div className="hidden md:flex items-center space-x-5">
+          <div className="hidden md:flex items-center space-x-4">
             <button
               onClick={toggleTheme}
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -124,7 +152,36 @@ const Navbar = () => {
               {darkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
             </button>
 
-            {user && user.role === "user" && (
+            {/* Purchase mode toggle — only for seller/admin */}
+            {isNonUserRole && (
+              <button
+                type="button"
+                onClick={togglePurchaseMode}
+                title={purchaseMode ? "Exit purchase mode" : "Switch to purchase mode"}
+                aria-label={purchaseMode ? "Exit purchase mode" : "Switch to purchase mode"}
+                className={`relative p-1.5 rounded-lg transition-all ${
+                  purchaseMode
+                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500"
+                    : "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <ArrowLeftRight size={18} />
+              </button>
+            )}
+
+            {/* Chat link */}
+            {user && (
+              <Link
+                to="/chat"
+                className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                title="Messages"
+              >
+                <MessageCircle size={18} />
+              </Link>
+            )}
+
+            {/* Cart & Wishlist — shown for user role always, and for seller/admin in purchase mode */}
+            {showShoppingUI && (
               <>
                 <Link to="/wishlist" className="relative group">
                   <FaHeart
@@ -165,7 +222,7 @@ const Navbar = () => {
                 </button>
                 <div
                   role="menu"
-                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200"
+                  className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-md shadow-md py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200"
                 >
                   <Link
                     to="/profile"
@@ -174,6 +231,27 @@ const Navbar = () => {
                     <FaUser className="inline mr-2" />
                     My Profile
                   </Link>
+
+                  {/* Shopping links in dropdown — for all roles */}
+                  {showShoppingUI && (
+                    <>
+                      <Link
+                        to="/my-orders"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      >
+                        <ShoppingBag size={14} className="inline mr-2" />
+                        My Orders
+                      </Link>
+                      <Link
+                        to="/addresses"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      >
+                        <FaHome className="inline mr-2" />
+                        My Addresses
+                      </Link>
+                    </>
+                  )}
+
                   {user?.role === "admin" && (
                     <Link
                       to="/admin/dashboard"
@@ -192,6 +270,8 @@ const Navbar = () => {
                       Seller Dashboard
                     </Link>
                   )}
+
+                  <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
@@ -274,8 +354,25 @@ const Navbar = () => {
                 {darkMode ? "Light Mode" : "Dark Mode"}
               </button>
 
-              {user && user.role === "user" && (
-                <div className="flex items-center space-x-4 px-3">
+              {/* Purchase mode toggle — mobile */}
+              {isNonUserRole && (
+                <button
+                  type="button"
+                  onClick={togglePurchaseMode}
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                    purchaseMode
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <ArrowLeftRight size={16} className="mr-2" />
+                  {purchaseMode ? "Exit Purchase Mode" : "Purchase Mode"}
+                </button>
+              )}
+
+              {/* Shopping icons — mobile */}
+              {showShoppingUI && (
+                <div className="flex items-center space-x-4 px-3 py-2">
                   <Link
                     to="/wishlist"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -300,11 +397,19 @@ const Navbar = () => {
                       </span>
                     )}
                   </Link>
+                  {user && (
+                    <Link
+                      to="/chat"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <MessageCircle size={18} />
+                    </Link>
+                  )}
                 </div>
               )}
 
               {user ? (
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
                   <Link
                     to="/profile"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -312,6 +417,24 @@ const Navbar = () => {
                   >
                     My Profile
                   </Link>
+                  {showShoppingUI && (
+                    <>
+                      <Link
+                        to="/my-orders"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block px-3 py-2"
+                      >
+                        My Orders
+                      </Link>
+                      <Link
+                        to="/addresses"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block px-3 py-2"
+                      >
+                        My Addresses
+                      </Link>
+                    </>
+                  )}
                   {user?.role === "admin" && (
                     <Link
                       to="/admin/dashboard"
@@ -335,7 +458,7 @@ const Navbar = () => {
                       handleLogout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2"
+                    className="w-full text-left px-3 py-2 text-red-600 dark:text-red-400"
                   >
                     Logout
                   </button>

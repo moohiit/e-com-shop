@@ -19,7 +19,6 @@ import {
   useClearCartApiMutation,
 } from "../../features/cart/cartApiSlice";
 import { toast } from "react-hot-toast";
-import AccessDenied from "../../components/common/AccessDenied";
 import {
   calculateCartPricing,
   calculateLinePricing,
@@ -67,10 +66,6 @@ function Cart() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverCart, user]);
-
-  if (user?.role === "seller" || user?.role === "admin") {
-    return <AccessDenied />;
-  }
 
   const handleIncrease = (item) => {
     if (item.quantity >= (item.stock || 99)) {

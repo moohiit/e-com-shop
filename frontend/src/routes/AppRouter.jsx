@@ -90,7 +90,12 @@ export function AppRouter() {
             <Route path="profile" element={<Profile />} />
             <Route path="chat" element={<ChatPage />} />
           </Route>
-          <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
+          {/* Shopping features — available to ALL authenticated roles (purchase mode) */}
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={["user", "seller", "admin"]} />
+            }
+          >
             <Route path="checkout" element={<Checkout />} />
             <Route path="user-dashboard" element={<Dashboard />} />
             <Route path="wishlist" element={<Wishlist />} />
@@ -98,7 +103,6 @@ export function AppRouter() {
             <Route path="order/:id" element={<OrderDetails />} />
             <Route path="order-success" element={<OrderSuccess />} />
             <Route path="addresses" element={<ManageAddresses />} />
-
           </Route>
         </Route>
 

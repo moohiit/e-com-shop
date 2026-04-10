@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import Conversation from "../models/Conversation.js";
 
 export const setupSocket = (server, app) => {
   const io = new Server(server, {
@@ -36,9 +37,16 @@ export const setupSocket = (server, app) => {
     // Join user's personal room
     socket.join(`user:${socket.userId}`);
 
-    // Join a conversation room
-    socket.on("joinConversation", (conversationId) => {
-      socket.join(`conversation:${conversationId}`);
+    // Join a conversation room — verify the user is a participant first
+    socket.on("joinConversation", async (conversationId) => {
+      try {
+        const conv = await Conversation.findById(conversationId).select("participants").lean();
+        if (conv && conv.participants.some((p) => p.toString() === socket.userId)) {
+          socket.join(`conversation:${conversationId}`);
+        }
+      } catch {
+        // Silently ignore invalid IDs
+      }
     });
 
     // Leave a conversation room
@@ -46,7 +54,7 @@ export const setupSocket = (server, app) => {
       socket.leave(`conversation:${conversationId}`);
     });
 
-    // Typing indicators
+    // Typing indicators — only broadcast to rooms the user has joined
     socket.on("typing", ({ conversationId }) => {
       socket.to(`conversation:${conversationId}`).emit("userTyping", {
         userId: socket.userId,
@@ -61,7 +69,7 @@ export const setupSocket = (server, app) => {
     });
 
     socket.on("disconnect", () => {
-      // Cleanup if needed
+      // Socket.io auto-cleans room membership on disconnect
     });
   });
 
