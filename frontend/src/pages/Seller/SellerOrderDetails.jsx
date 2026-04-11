@@ -1,576 +1,811 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect, useMemo } from "react";
+import { Link, useParams } from "react-router-dom";
+import { format } from "date-fns";
+import { toast } from "react-hot-toast";
+import {
+  ChevronLeft,
+  Package,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
+  IndianRupee,
+  ShoppingBag,
+  X,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  Tag,
+  Calendar,
+} from "lucide-react";
 import {
   useGetSellerOrderByIdQuery,
   useUpdateSellerOrderItemStatusMutation,
-  useCancelSellerOrderItemMutation
-} from '../../features/order/sellerOrderApi';
-import {
-  Box,
-  Typography,
-  Button,
-  Select,
-  MenuItem,
-  Card,
-  CardContent,
-  Divider,
-  Grid,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Chip,
-  CircularProgress,
-  TextField,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Alert,
-  Paper,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
-import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+  useCancelSellerOrderItemMutation,
+} from "../../features/order/sellerOrderApi";
+
+const statusStyles = {
+  Processing:
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800",
+  Shipped:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800",
+  Delivered:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-800",
+  Cancelled:
+    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-800",
+  "Partially Delivered":
+    "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 ring-1 ring-teal-200 dark:ring-teal-800",
+  "Partially Shipped":
+    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 ring-1 ring-orange-200 dark:ring-orange-800",
+  "Partially Cancelled":
+    "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 ring-1 ring-pink-200 dark:ring-pink-800",
+};
+
+const statusIcon = (status) => {
+  if (status?.includes("Delivered")) return <CheckCircle2 size={14} />;
+  if (status?.includes("Shipped")) return <Truck size={14} />;
+  if (status?.includes("Cancelled")) return <XCircle size={14} />;
+  return <Clock size={14} />;
+};
+
+const StatusPill = ({ status }) => (
+  <span
+    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+      statusStyles[status] ||
+      "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+    }`}
+  >
+    {statusIcon(status)}
+    {status}
+  </span>
+);
+
+const overallStatusOf = (items = []) => {
+  if (!items.length) return "Processing";
+  const statuses = items.map((i) => i.orderStatus);
+  const unique = [...new Set(statuses)];
+  if (unique.length === 1) return unique[0];
+  if (statuses.includes("Cancelled")) return "Partially Cancelled";
+  if (statuses.includes("Delivered")) return "Partially Delivered";
+  if (statuses.includes("Shipped")) return "Partially Shipped";
+  return "Processing";
+};
+
+const TRACKER_STEPS = ["Processing", "Shipped", "Delivered"];
+const stepIndexFor = (status) => {
+  if (status?.includes("Delivered")) return 2;
+  if (status?.includes("Shipped")) return 1;
+  if (status?.includes("Cancelled")) return -1;
+  return 0;
+};
+
+const StatusTracker = ({ status }) => {
+  const idx = stepIndexFor(status);
+  const cancelled = status?.includes("Cancelled");
+  return (
+    <div className="flex items-center gap-2">
+      {TRACKER_STEPS.map((step, i) => {
+        const done = !cancelled && i <= idx;
+        const active = !cancelled && i === idx;
+        return (
+          <div key={step} className="flex items-center flex-1">
+            <div
+              className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                done
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20"
+                  : cancelled
+                  ? "bg-rose-50 text-rose-500 dark:bg-rose-900/20 dark:text-rose-300"
+                  : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  done ? "bg-white/25" : "bg-white dark:bg-gray-700"
+                }`}
+              >
+                {i + 1}
+              </span>
+              {step}
+              {active && (
+                <span className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+              )}
+            </div>
+            {i < TRACKER_STEPS.length - 1 && (
+              <div
+                className={`flex-1 h-[3px] mx-1 rounded-full ${
+                  i < idx && !cancelled
+                    ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                    : "bg-gray-200 dark:bg-gray-800"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const StatCard = ({ label, value, icon: Icon, accent }) => (
+  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {label}
+        </p>
+        <p className="mt-1.5 text-xl font-bold text-gray-900 dark:text-white">
+          {value}
+        </p>
+      </div>
+      <div
+        className={`w-9 h-9 rounded-xl flex items-center justify-center ${accent}`}
+      >
+        <Icon size={16} />
+      </div>
+    </div>
+  </div>
+);
 
 function SellerOrderDetails() {
   const { id } = useParams();
-  const { data, isLoading, isError, error, refetch } = useGetSellerOrderByIdQuery(id);
-  const [updateItemStatus, { isLoading: isUpdating }] = useUpdateSellerOrderItemStatusMutation();
-  const [cancelItem, { isLoading: isCancelling }] = useCancelSellerOrderItemMutation();
+  const { data, isLoading, isError, error, refetch, isFetching } =
+    useGetSellerOrderByIdQuery(id);
+  const [updateItemStatus, { isLoading: isUpdating }] =
+    useUpdateSellerOrderItemStatusMutation();
+  const [cancelItem, { isLoading: isCancelling }] =
+    useCancelSellerOrderItemMutation();
+
   const [itemStatuses, setItemStatuses] = useState({});
-  const [cancelReason, setCancelReason] = useState('');
-  const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [updatingItemId, setUpdatingItemId] = useState(null);
 
   const order = data?.order;
 
-  // Status color mapping
-  const statusColors = {
-    Processing: 'info',
-    Shipped: 'warning',
-    Delivered: 'success',
-    Cancelled: 'error',
-    'Partially Delivered': 'success',
-    'Partially Shipped': 'warning',
-    'Partially Cancelled': 'error'
-  };
+  useEffect(() => {
+    if (order) {
+      const initial = {};
+      order.items.forEach((item) => {
+        initial[item._id] = item.orderStatus;
+      });
+      setItemStatuses(initial);
+    }
+  }, [order]);
 
-  // Memoized derived values
-  const getOverallStatus = useMemo(() => (items) => {
-    if (!items || items.length === 0) return 'Processing';
-
-    const statuses = items.map(item => item.orderStatus);
-    const uniqueStatuses = [...new Set(statuses)];
-
-    if (uniqueStatuses.length === 1) return uniqueStatuses[0];
-
-    if (statuses.includes('Cancelled')) return 'Partially Cancelled';
-    if (statuses.includes('Delivered')) return 'Partially Delivered';
-    if (statuses.includes('Shipped')) return 'Partially Shipped';
-
-    return 'Processing';
-  }, []);
+  const overallStatus = useMemo(
+    () => (order ? overallStatusOf(order.items) : "Processing"),
+    [order]
+  );
 
   const totalSavings = useMemo(() => {
     if (!order?.items) return 0;
     return order.items.reduce((sum, item) => {
-      const originalPrice = item.basePrice || 0;
-      const finalPrice = item.price || 0;
-      return sum + (originalPrice - finalPrice) * item.quantity;
+      const base = item.basePrice || 0;
+      const price = item.price || 0;
+      return sum + (base - price) * item.quantity;
     }, 0);
   }, [order]);
 
-  useEffect(() => {
-    if (order) {
-      const initialStatuses = {};
-      order.items.forEach(item => {
-        initialStatuses[item._id] = item.orderStatus;
-      });
-      setItemStatuses(initialStatuses);
-    }
-  }, [order]);
+  const totalQty = useMemo(
+    () => (order?.items || []).reduce((s, i) => s + (i.quantity || 0), 0),
+    [order]
+  );
 
-  const handleStatusUpdate = async (itemId, productId) => {
+  const handleStatusUpdate = async (item) => {
     try {
-      await updateItemStatus({ id: order._id, productId, status: itemStatuses[itemId] }).unwrap();
-      setSuccessMessage('Item status updated successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setUpdatingItemId(item._id);
+      await updateItemStatus({
+        id: order._id,
+        productId: item.product?._id || item.product,
+        status: itemStatuses[item._id],
+      }).unwrap();
+      toast.success("Item status updated");
       refetch();
     } catch (err) {
-      toast.error(err?.data?.message || 'Failed to update item status');
-      console.error('Failed to update item status:', err);
+      toast.error(err?.data?.message || "Failed to update item status");
+    } finally {
+      setUpdatingItemId(null);
     }
   };
 
-  const handleOpenCancelDialog = (item) => {
-    setSelectedItem(item);
-    setOpenCancelDialog(true);
-  };
-
-  const handleCloseCancelDialog = () => {
-    setOpenCancelDialog(false);
-    setCancelReason('');
-    setSelectedItem(null);
-  };
-
-  const handleCancelItem = async () => {
+  const handleCancel = async () => {
     try {
       await cancelItem({
         id: order._id,
         productId: selectedItem.product?._id || selectedItem.product,
-        reason: cancelReason
+        reason: cancelReason,
       }).unwrap();
-      setSuccessMessage('Item cancelled successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      toast.success("Item cancelled");
+      setSelectedItem(null);
+      setCancelReason("");
       refetch();
-      handleCloseCancelDialog();
     } catch (err) {
-      toast.error(err?.data?.message || 'Failed to cancel item');
-      console.error('Failed to cancel item:', err);
+      toast.error(err?.data?.message || "Failed to cancel item");
     }
   };
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="64vh">
-        <CircularProgress color="primary" />
-      </Box>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        </div>
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="error" variant="h6">
-          Error: {error?.data?.message || 'Failed to load order details'}
-        </Typography>
-        <Button
-          variant="contained"
-          sx={{ mt: 2 }}
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </Button>
-      </Box>
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl p-8 text-center">
+          <AlertCircle className="mx-auto mb-3 text-rose-500" size={40} />
+          <p className="text-rose-700 dark:text-rose-300 font-medium mb-4">
+            {error?.data?.message || "Failed to load order details"}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium"
+          >
+            <RefreshCw size={16} /> Try again
+          </button>
+        </div>
+      </div>
     );
   }
 
   if (!order) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" gutterBottom>
-          Order Not Found
-        </Typography>
-        <Button
-          variant="contained"
-          component={Link}
-          to="/seller/orders"
-          sx={{ mt: 2 }}
-        >
-          Back to Orders
-        </Button>
-      </Box>
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-10 text-center">
+          <p className="text-lg font-semibold mb-4">Order not found</p>
+          <Link
+            to="/seller/orders"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium"
+          >
+            <ChevronLeft size={16} /> Back to Orders
+          </Link>
+        </div>
+      </div>
     );
   }
 
-  const overallStatus = getOverallStatus(order.items);
+  const addr = order.order?.shippingAddress;
 
   return (
-    <Box sx={{
-      p: isMobile ? 2 : 3,
-      maxWidth: 1400,
-      margin: '0 auto',
-      backgroundColor: theme.palette.background.default,
-      minHeight: '100vh'
-    }}>
-      {successMessage && (
-        <Alert
-          severity="success"
-          sx={{ mb: 3 }}
-          onClose={() => setSuccessMessage('')}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          component={Link}
+    <div className="max-w-7xl mx-auto">
+      {/* Top bar */}
+      <div className="mb-4 flex items-center justify-between">
+        <Link
           to="/seller/orders"
-          sx={{ mb: 2 }}
+          className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400"
         >
+          <ChevronLeft size={18} />
           Back to Orders
-        </Button>
+        </Link>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+          Refresh
+        </button>
+      </div>
 
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-            Order Details
-          </Typography>
-          <Chip
-            label={`Order #${order._id.substring(0, 8).toUpperCase()}`}
-            variant="outlined"
-            sx={{
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-              fontWeight: 500
+      {/* Gradient header */}
+      <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 p-6 md:p-8 text-white shadow-xl shadow-amber-500/20">
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-20 -left-12 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shadow-inner">
+                <ShoppingBag size={20} />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-white/80">
+                  Order ID
+                </p>
+                <p className="font-mono text-lg font-bold">
+                  #{String(order._id).substring(0, 12).toUpperCase()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-white/90">
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar size={14} />
+                {format(new Date(order.createdAt), "dd MMM yyyy • hh:mm a")}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-start md:items-end gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur text-xs font-bold">
+              {statusIcon(overallStatus)}
+              {overallStatus}
+            </span>
+            <p className="text-2xl md:text-3xl font-bold">
+              ₹{Number(order.totalPrice || 0).toFixed(2)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tracker */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 md:p-5 mb-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+          Fulfilment Progress
+        </p>
+        <StatusTracker status={overallStatus} />
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <StatCard
+          label="Items"
+          value={order.items.length}
+          icon={Package}
+          accent="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300"
+        />
+        <StatCard
+          label="Total Qty"
+          value={totalQty}
+          icon={Tag}
+          accent="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300"
+        />
+        <StatCard
+          label="Payment"
+          value={order.order?.isPaid ? "Paid" : "Pending"}
+          icon={CreditCard}
+          accent={
+            order.order?.isPaid
+              ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300"
+              : "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300"
+          }
+        />
+        <StatCard
+          label="Total"
+          value={`₹${Number(order.totalPrice || 0).toFixed(2)}`}
+          icon={IndianRupee}
+          accent="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: items */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                Order Items ({order.items.length})
+              </h2>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {order.items.map((item) => {
+                const availableStatusOptions = [
+                  "Processing",
+                  "Shipped",
+                  "Delivered",
+                ].filter(
+                  (opt) => opt !== item.orderStatus && !item.isCancelled
+                );
+                const lineTotal = Number(item.price || 0) * item.quantity;
+                const isThisUpdating = updatingItemId === item._id;
+
+                return (
+                  <div key={item._id} className="p-4 md:p-5">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Image */}
+                      <div className="shrink-0">
+                        {item.product?.images?.[0]?.imageUrl ? (
+                          <img
+                            src={item.product.images[0].imageUrl}
+                            alt={item.name}
+                            className="w-24 h-24 rounded-xl object-cover border border-gray-200 dark:border-gray-800"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+                            <Package size={28} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            {item.product?.brand && (
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {item.product.brand}
+                              </p>
+                            )}
+                            <p className="text-sm md:text-base font-semibold text-gray-900 dark:text-white line-clamp-2">
+                              {item.name}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Qty: {item.quantity} · ₹
+                              {Number(item.price || 0).toFixed(2)} each
+                            </p>
+                          </div>
+                          <p className="text-base font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                            ₹{lineTotal.toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* Price breakdown */}
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Base
+                            </span>
+                            <span className="font-medium">
+                              ₹
+                              {(
+                                Number(item.basePrice || 0) * item.quantity
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                          {item.discountAmount > 0 && (
+                            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                              <span>
+                                Disc ({item.discountPercentage || 0}%)
+                              </span>
+                              <span>
+                                −₹
+                                {(item.discountAmount * item.quantity).toFixed(
+                                  2
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Tax ({item.taxPercentage || 0}%)
+                            </span>
+                            <span className="font-medium">
+                              ₹
+                              {(
+                                Number(item.taxAmount || 0) * item.quantity
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Line total
+                            </span>
+                            <span className="font-semibold">
+                              ₹{lineTotal.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Status + timestamps */}
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <StatusPill status={item.orderStatus} />
+                          {item.isDelivered && item.deliveredAt && (
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Delivered{" "}
+                              {format(
+                                new Date(item.deliveredAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </span>
+                          )}
+                          {item.isCancelled && item.cancelledAt && (
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Cancelled{" "}
+                              {format(
+                                new Date(item.cancelledAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Cancellation reason */}
+                        {item.isCancelled && item.cancellationReason && (
+                          <p className="mt-2 text-xs italic text-gray-500 dark:text-gray-400">
+                            Reason: {item.cancellationReason}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        {!item.isCancelled && (
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <select
+                              value={
+                                itemStatuses[item._id] || item.orderStatus
+                              }
+                              onChange={(e) =>
+                                setItemStatuses({
+                                  ...itemStatuses,
+                                  [item._id]: e.target.value,
+                                })
+                              }
+                              disabled={
+                                isUpdating ||
+                                availableStatusOptions.length === 0
+                              }
+                              className="px-3 py-2 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                            >
+                              <option value={item.orderStatus}>
+                                {item.orderStatus} (current)
+                              </option>
+                              {availableStatusOptions.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusUpdate(item)}
+                              disabled={
+                                isUpdating ||
+                                itemStatuses[item._id] === item.orderStatus ||
+                                availableStatusOptions.length === 0
+                              }
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {isThisUpdating && (
+                                <Loader2 size={12} className="animate-spin" />
+                              )}
+                              Update Status
+                            </button>
+                            {!item.isDelivered && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedItem(item)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                              >
+                                <XCircle size={12} /> Cancel Item
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Price summary */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+              Price Summary
+            </h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Items Price
+                </span>
+                <span className="font-medium">
+                  ₹{Number(order.itemsPrice || 0).toFixed(2)}
+                </span>
+              </div>
+              {order.totalDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <span>Discount</span>
+                  <span>−₹{Number(order.totalDiscount).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Tax</span>
+                <span className="font-medium">
+                  ₹{Number(order.taxPrice || 0).toFixed(2)}
+                </span>
+              </div>
+              {totalSavings > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <span>Savings</span>
+                  <span>−₹{totalSavings.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <span className="font-semibold">Total</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">
+                  ₹{Number(order.totalPrice || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: buyer + address */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+              <User size={14} /> Buyer
+            </h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <User
+                  size={14}
+                  className="text-gray-400 mt-0.5 shrink-0"
+                />
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {order.order?.user?.name || "Unknown"}
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Mail size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                <span className="text-gray-600 dark:text-gray-400 break-all">
+                  {order.order?.user?.email || "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+              <MapPin size={14} /> Shipping Address
+            </h2>
+            {addr ? (
+              <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {addr.fullName}
+                </p>
+                <p>
+                  {addr.flatOrBuilding}, {addr.locality}
+                </p>
+                {addr.landmark && (
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    Landmark: {addr.landmark}
+                  </p>
+                )}
+                <p>
+                  {addr.city}, {addr.state} — {addr.pincode}
+                </p>
+                {addr.country && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {addr.country}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 text-sm pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <Phone size={14} className="text-gray-400" />
+                  <span className="font-medium">{addr.mobileNumber}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                No address on this order.
+              </p>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+              <CreditCard size={14} /> Payment
+            </h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Method
+                </span>
+                <span className="font-medium">
+                  {order.order?.paymentMethod || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Status
+                </span>
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    order.order?.isPaid
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                      : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
+                  }`}
+                >
+                  {order.order?.isPaid ? "Paid" : "Pending"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cancel Dialog */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => {
+              setSelectedItem(null);
+              setCancelReason("");
             }}
           />
-        </Box>
-      </Box>
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Cancel Item
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedItem(null);
+                  setCancelReason("");
+                }}
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-      {/* Order Summary Card */}
-      <Card sx={{ mb: 3, backgroundColor: theme.palette.background.paper }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Order Date
-              </Typography>
-              <Typography variant="body1" fontWeight={500}>
-                {format(new Date(order.createdAt), 'dd MMM yyyy, h:mm a')}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Total Amount
-              </Typography>
-              <Typography variant="body1" fontWeight={500}>
-                ₹{order.totalPrice.toFixed(2)}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Payment Method
-              </Typography>
-              <Typography variant="body1" fontWeight={500}>
-                {order.order?.paymentMethod}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Order Status
-              </Typography>
-              <Chip
-                label={overallStatus}
-                color={statusColors[overallStatus] || 'default'}
-                size="medium"
-                sx={{ fontWeight: 500 }}
+            <div className="flex gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+              {selectedItem.product?.images?.[0]?.imageUrl ? (
+                <img
+                  src={selectedItem.product.images[0].imageUrl}
+                  alt={selectedItem.name}
+                  className="w-14 h-14 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+                  <Package size={20} />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm line-clamp-1">
+                  {selectedItem.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Qty: {selectedItem.quantity} · ₹
+                  {(
+                    Number(selectedItem.price || 0) * selectedItem.quantity
+                  ).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="cancel-reason"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Reason for cancellation
+              </label>
+              <textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={3}
+                placeholder="Why are you cancelling this item?"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+            </div>
 
-      <Grid container spacing={3}>
-        {/* Left Column - Buyer and Shipping Info */}
-        <Grid item xs={12} md={4}>
-          {/* Buyer Information Card */}
-          <Card sx={{ mb: 3, backgroundColor: theme.palette.background.paper }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Buyer Information
-              </Typography>
-              <Box sx={{ '& > *:not(:last-child)': { mb: 1.5 } }}>
-                <div>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Name
-                  </Typography>
-                  <Typography fontWeight={500}>{order.order?.user?.name}</Typography>
-                </div>
-                <div>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Email
-                  </Typography>
-                  <Typography fontWeight={500}>{order.order?.user?.email}</Typography>
-                </div>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Shipping Address Card */}
-          <Card sx={{ backgroundColor: theme.palette.background.paper }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Shipping Address
-              </Typography>
-              <Box sx={{ '& > *:not(:last-child)': { mb: 1.5 } }}>
-                <Typography fontWeight={500}>{order.order?.shippingAddress?.fullName}</Typography>
-                <Typography>
-                  {order.order?.shippingAddress?.flatOrBuilding}, {order.order?.shippingAddress?.locality}
-                </Typography>
-                <Typography>{order.order?.shippingAddress?.landmark}</Typography>
-                <Typography>
-                  {order.order?.shippingAddress?.city}, {order.order?.shippingAddress?.state} - {order.order?.shippingAddress?.pincode}
-                </Typography>
-                <Typography>{order.order?.shippingAddress?.country}</Typography>
-                <Box mt={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Contact
-                  </Typography>
-                  <Typography fontWeight={500}>{order.order?.shippingAddress?.mobileNumber}</Typography>
-                </Box>
-                <Box mt={2}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Payment Status
-                  </Typography>
-                  <Chip
-                    label={order.order?.isPaid ? 'Paid' : 'Pending'}
-                    color={order.order?.isPaid ? 'success' : 'warning'}
-                    size="small"
-                  />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Right Column - Order Items and Summary */}
-        <Grid item xs={12} md={8}>
-          {/* Order Items Card */}
-          <Card sx={{ mb: 3, backgroundColor: theme.palette.background.paper }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Order Items ({order.items.length})
-              </Typography>
-              <List>
-                {order.items.map((item) => {
-                  const availableStatusOptions = ['Processing', 'Shipped', 'Delivered'].filter(
-                    opt => opt !== item.orderStatus && !item.isCancelled
-                  );
-
-                  return (
-                    <React.Fragment key={item._id}>
-                      <ListItem
-                        alignItems="flex-start"
-                        sx={{
-                          py: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)'
-                          }
-                        }}
-                      >
-                        <ListItemAvatar>
-                          <Avatar
-                            variant="rounded"
-                            src={item.product?.images?.[0]?.imageUrl}
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              mr: 2,
-                              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                            }}
-                          >
-                            {!item.product?.images?.[0]?.imageUrl && 'No Image'}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle1" fontWeight={500}>
-                            {item.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Brand: {item.product?.brand}
-                          </Typography>
-                          <Box mt={1}>
-                            <Typography variant="body2">
-                              Base Price: ₹{(item.basePrice * item.quantity).toFixed(2)}
-                            </Typography>
-                            {item.discountAmount > 0 && (
-                              <Typography variant="body2" color="error">
-                                Discount ({item.discountPercentage || 0}%): ₹{(item.discountAmount * item.quantity).toFixed(2)}
-                              </Typography>
-                            )}
-                            <Typography variant="body2">
-                              Taxes ({item.taxPercentage || 0}%): ₹{(item.taxAmount * item.quantity).toFixed(2)}
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              Total Price: ₹{(item.price * item.quantity).toFixed(2)}
-                            </Typography>
-                          </Box>
-                          <Box display="flex" alignItems="center" mt={1}>
-                            <Chip
-                              label={item.orderStatus}
-                              color={statusColors[item.orderStatus] || 'default'}
-                              size="small"
-                              sx={{ fontWeight: 500 }}
-                            />
-                            {item.isDelivered && item.deliveredAt && (
-                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                on {format(new Date(item.deliveredAt), 'MMM dd, yyyy')}
-                              </Typography>
-                            )}
-                            {item.isCancelled && item.cancelledAt && (
-                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                on {format(new Date(item.cancelledAt), 'MMM dd, yyyy')}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-                        <Box sx={{
-                          minWidth: isMobile ? '100%' : 200,
-                          textAlign: isMobile ? 'left' : 'right',
-                          mt: isMobile ? 2 : 0,
-                          pl: isMobile ? 9 : 0
-                        }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Qty: {item.quantity}
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600} sx={{ my: 1 }}>
-                            ₹{(item.price * item.quantity).toFixed(2)}
-                          </Typography>
-                          {!item.isCancelled && (
-                            <Box sx={{
-                              display: 'flex',
-                              flexDirection: isMobile ? 'column' : 'column',
-                              gap: 1
-                            }}>
-                              <Select
-                                value={itemStatuses[item._id] || item.orderStatus}
-                                onChange={(e) => setItemStatuses({ ...itemStatuses, [item._id]: e.target.value })}
-                                size="small"
-                                sx={{
-                                  minWidth: 120,
-                                  backgroundColor: theme.palette.background.paper
-                                }}
-                                disabled={isUpdating || availableStatusOptions.length === 0}
-                              >
-                                {availableStatusOptions.map((s) => (
-                                  <MenuItem key={s} value={s}>{s}</MenuItem>
-                                ))}
-                              </Select>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                onClick={() => handleStatusUpdate(item._id, item.product?._id)}
-                                disabled={isUpdating || itemStatuses[item._id] === item.orderStatus || availableStatusOptions.length === 0}
-                                sx={{ textTransform: 'none' }}
-                              >
-                                {isUpdating ? 'Updating...' : 'Update Status'}
-                              </Button>
-                              {!item.isDelivered && (
-                                <Button
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                  onClick={() => handleOpenCancelDialog(item)}
-                                  sx={{ textTransform: 'none' }}
-                                >
-                                  Cancel Item
-                                </Button>
-                              )}
-                            </Box>
-                          )}
-                        </Box>
-                      </ListItem>
-                      <Divider component="li" />
-                    </React.Fragment>
-                  );
-                })}
-              </List>
-            </CardContent>
-          </Card>
-
-          {/* Order Summary Card */}
-          <Card sx={{ backgroundColor: theme.palette.background.paper }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Price Summary
-              </Typography>
-              <Box sx={{ '& > *:not(:last-child)': { mb: 1.5 } }}>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography>Items Price</Typography>
-                  <Typography>₹{order.itemsPrice.toFixed(2)}</Typography>
-                </Box>
-                {order.totalDiscount > 0 && (
-                  <Box display="flex" justifyContent="space-between" color="error.main">
-                    <Typography>Total Discount</Typography>
-                    <Typography>-₹{order.totalDiscount.toFixed(2)}</Typography>
-                  </Box>
-                )}
-                <Box display="flex" justifyContent="space-between">
-                  <Typography>Tax</Typography>
-                  <Typography>₹{order.taxPrice?.toFixed(2)}</Typography>
-                </Box>
-                {totalSavings > 0 && (
-                  <Box display="flex" justifyContent="space-between" color="success.main">
-                    <Typography>Discount Savings</Typography>
-                    <Typography>-₹{totalSavings.toFixed(2)}</Typography>
-                  </Box>
-                )}
-                <Divider sx={{ my: 2 }} />
-                <Box display="flex" justifyContent="space-between" fontWeight="bold">
-                  <Typography variant="subtitle1">Total</Typography>
-                  <Typography variant="subtitle1">₹{order.totalPrice.toFixed(2)}</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Cancel Item Dialog */}
-      <Dialog
-        open={openCancelDialog}
-        onClose={handleCloseCancelDialog}
-        PaperProps={{
-          sx: {
-            backgroundColor: theme.palette.background.paper,
-            backgroundImage: 'none'
-          }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 600 }}>Cancel Item</DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>
-            Are you sure you want to cancel the following item?
-          </Typography>
-          <Typography variant="subtitle1" gutterBottom fontWeight={500}>
-            {selectedItem?.name}
-          </Typography>
-          <Box sx={{ '& > *:not(:last-child)': { mb: 0.5 } }}>
-            <Typography>Quantity: {selectedItem?.quantity}</Typography>
-            <Typography>Base Price: ₹{(selectedItem?.basePrice * selectedItem?.quantity).toFixed(2)}</Typography>
-            {selectedItem?.discountAmount > 0 && (
-              <Typography color="error">
-                Discount ({selectedItem?.discountPercentage || 0}%): ₹{(selectedItem?.discountAmount * selectedItem?.quantity).toFixed(2)}
-              </Typography>
-            )}
-            <Typography>Taxes ({selectedItem?.taxPercentage || 0}%): ₹{(selectedItem?.taxAmount * selectedItem?.quantity).toFixed(2)}</Typography>
-            <Typography fontWeight={500}>Total Price: ₹{(selectedItem?.price * selectedItem?.quantity).toFixed(2)}</Typography>
-          </Box>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Reason for cancellation"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            required
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCancelDialog}>Close</Button>
-          <Button
-            onClick={handleCancelItem}
-            color="error"
-            disabled={!cancelReason || isCancelling}
-            variant="contained"
-          >
-            {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedItem(null);
+                  setCancelReason("");
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={!cancelReason.trim() || isCancelling}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold bg-rose-600 hover:bg-rose-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg"
+              >
+                {isCancelling ? "Cancelling…" : "Confirm Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
-import { NavLink } from "react-router-dom";
-import { LogOut, Sun, Moon, ChevronRight } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { LogOut, Sun, Moon, ChevronRight, ShoppingBag } from "lucide-react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { usePurchaseMode } from "../../hooks/usePurchaseMode";
 
 /**
  * Shared sidebar for Admin and Seller dashboards.
@@ -49,6 +50,14 @@ const DashboardSidebar = ({
 }) => {
   const { darkMode, toggleTheme } = useTheme();
   const accent = accentMap[brand?.accent || "blue"];
+  const [purchaseMode, setPurchaseMode] = usePurchaseMode();
+  const navigate = useNavigate();
+
+  const enterPurchaseMode = () => {
+    setPurchaseMode(true);
+    onClose?.();
+    navigate("/");
+  };
 
   return (
     <>
@@ -173,8 +182,18 @@ const DashboardSidebar = ({
           ))}
         </nav>
 
-        {/* Footer — theme toggle + logout */}
+        {/* Footer — purchase mode + theme toggle + logout */}
         <div className="px-3 py-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
+          <button
+            type="button"
+            onClick={enterPurchaseMode}
+            aria-label="Switch to purchase mode"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 transition-all"
+          >
+            <ShoppingBag size={18} />
+            <span>{purchaseMode ? "Purchase Mode Active" : "Switch to Purchase Mode"}</span>
+          </button>
+
           <button
             type="button"
             onClick={toggleTheme}

@@ -24,6 +24,7 @@ import { MessageCircle, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import SearchBar from "./SearchBar";
 import { logoutUser } from "../../features/auth/authSlice";
+import { usePurchaseMode, clearPurchaseMode } from "../../hooks/usePurchaseMode";
 
 const Navbar = () => {
   const { darkMode, toggleTheme } = useTheme();
@@ -35,20 +36,8 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Purchase mode: stored in localStorage so it persists across page reloads
-  const [purchaseMode, setPurchaseMode] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("purchaseMode")) || false;
-    } catch {
-      return false;
-    }
-  });
-
-  const togglePurchaseMode = () => {
-    const next = !purchaseMode;
-    setPurchaseMode(next);
-    localStorage.setItem("purchaseMode", JSON.stringify(next));
-  };
+  // Purchase mode: shared via hook so route guards stay in sync
+  const [purchaseMode, , togglePurchaseMode] = usePurchaseMode();
 
   // Only show purchase-mode toggle for seller and admin
   const isNonUserRole = user?.role === "seller" || user?.role === "admin";
@@ -57,6 +46,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     try {
+      clearPurchaseMode();
       dispatch(logoutUser());
       navigate("/auth/login", { replace: true });
     } catch (err) {
@@ -70,12 +60,31 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
+  const buyerNavLinks = [
     { name: "Home", path: "/", icon: <FaHome className="mr-2" /> },
     { name: "Shop", path: "/products", icon: <FaStore className="mr-2" /> },
     { name: "About", path: "/about", icon: <FaInfoCircle className="mr-2" /> },
     { name: "Contact", path: "/contact", icon: <FaPhoneAlt className="mr-2" /> },
   ];
+
+  const sellerNavLinks = [
+    { name: "Dashboard", path: "/seller/dashboard", icon: <FaTachometerAlt className="mr-2" /> },
+    { name: "Products", path: "/seller/products", icon: <FaStore className="mr-2" /> },
+    { name: "Orders", path: "/seller/orders", icon: <ShoppingBag size={14} className="mr-2" /> },
+  ];
+
+  const adminNavLinks = [
+    { name: "Dashboard", path: "/admin/dashboard", icon: <FaTachometerAlt className="mr-2" /> },
+    { name: "Users", path: "/admin/users", icon: <FaUser className="mr-2" /> },
+    { name: "Products", path: "/admin/products", icon: <FaStore className="mr-2" /> },
+  ];
+
+  // When a seller/admin is NOT in purchase mode, swap buyer links for role links
+  const navLinks = showShoppingUI
+    ? buyerNavLinks
+    : user?.role === "admin"
+    ? adminNavLinks
+    : sellerNavLinks;
 
   return (
     <header
@@ -137,10 +146,12 @@ const Navbar = () => {
             ))}
           </nav>
 
-          {/* SearchBar */}
-          <div className="hidden md:block w-1/3 mx-4">
-            <SearchBar />
-          </div>
+          {/* SearchBar — product search is a buyer feature */}
+          {showShoppingUI && (
+            <div className="hidden md:block w-1/3 mx-4">
+              <SearchBar />
+            </div>
+          )}
 
           {/* Desktop Icons */}
           <div className="hidden md:flex items-center space-x-4">
@@ -320,9 +331,11 @@ const Navbar = () => {
             transition={{ duration: 0.3 }}
             className="md:hidden mt-4"
           >
-            <div className="mb-4">
-              <SearchBar />
-            </div>
+            {showShoppingUI && (
+              <div className="mb-4">
+                <SearchBar />
+              </div>
+            )}
             <nav className="flex flex-col space-y-2 pb-4">
               {navLinks.map((link) => (
                 <NavLink

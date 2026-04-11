@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import ProtectedRoute from "./ProtectedRoute";
+import BuyerRoute from "./BuyerRoute";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import SellerLayout from "../layouts/SellerLayout";
 import RoleBasedRedirect from "./RoleBasedRedirect";
@@ -67,11 +68,9 @@ export function AppRouter() {
 
         {/* User Routes */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Home />} />
           <Route path="dashboard" element={<RoleBasedRedirect />} />
-          <Route path="products" element={<ProductListing />} />
-          <Route path="product/:id" element={<ProductDetail />} />
-          <Route path="cart" element={<Cart />} />
+
+          {/* Info pages — accessible to everyone regardless of role/mode */}
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
           <Route path="faqs" element={<FAQs />} />
@@ -80,8 +79,20 @@ export function AppRouter() {
           <Route path="careers" element={<Careers />} />
           <Route path="terms" element={<Terms />} />
           <Route path="privacy" element={<Privacy />} />
-          <Route path="sell-on-shopease" element={<ApplyAsSeller />} />
-          {/* Protected Routes */}
+
+          {/* Home is accessible to all — Home itself limits sections by role/purchase mode */}
+          <Route index element={<Home />} />
+
+          {/* Buyer-facing public routes — sellers/admins bounced to their dashboard
+              unless they have switched into purchase mode */}
+          <Route element={<BuyerRoute />}>
+            <Route path="products" element={<ProductListing />} />
+            <Route path="product/:id" element={<ProductDetail />} />
+            <Route path="cart" element={<Cart />} />
+            <Route path="sell-on-shopease" element={<ApplyAsSeller />} />
+          </Route>
+
+          {/* Protected routes available to all authenticated roles (profile, chat) */}
           <Route
             element={
               <ProtectedRoute allowedRoles={["user", "seller", "admin"]} />
@@ -90,19 +101,22 @@ export function AppRouter() {
             <Route path="profile" element={<Profile />} />
             <Route path="chat" element={<ChatPage />} />
           </Route>
-          {/* Shopping features — available to ALL authenticated roles (purchase mode) */}
+
+          {/* Authenticated buyer routes — sellers/admins only allowed in purchase mode */}
           <Route
             element={
               <ProtectedRoute allowedRoles={["user", "seller", "admin"]} />
             }
           >
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="user-dashboard" element={<Dashboard />} />
-            <Route path="wishlist" element={<Wishlist />} />
-            <Route path="my-orders" element={<Orders />} />
-            <Route path="order/:id" element={<OrderDetails />} />
-            <Route path="order-success" element={<OrderSuccess />} />
-            <Route path="addresses" element={<ManageAddresses />} />
+            <Route element={<BuyerRoute requireAuth />}>
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="user-dashboard" element={<Dashboard />} />
+              <Route path="wishlist" element={<Wishlist />} />
+              <Route path="my-orders" element={<Orders />} />
+              <Route path="order/:id" element={<OrderDetails />} />
+              <Route path="order-success" element={<OrderSuccess />} />
+              <Route path="addresses" element={<ManageAddresses />} />
+            </Route>
           </Route>
         </Route>
 

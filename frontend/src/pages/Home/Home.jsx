@@ -7,11 +7,15 @@ import RecentlyViewed from '../../components/products/RecentlyViewed';
 import ProductCard from '../../components/products/ProductCard';
 import { useFetchCategoriesQuery } from '../../features/category/categoryApiSlice';
 import { useFetchAllProductsQuery } from '../../features/products/productApiSlice';
+import { usePurchaseMode } from '../../hooks/usePurchaseMode';
 
 function Home() {
   const user = useSelector((state) => state.auth.user);
   const role = user?.role;
   const userName = user?.name || 'Guest';
+  const [purchaseMode] = usePurchaseMode();
+  // Sellers/admins see a trimmed storefront preview unless they switch into purchase mode
+  const showBuyerSections = !role || role === 'user' || purchaseMode;
 
   // Live data — categories and most-popular products
   const {
@@ -48,13 +52,15 @@ function Home() {
             Discover amazing products at unbeatable prices
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/products"
-              className="inline-flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-3 rounded-lg font-medium shadow-lg transform hover:scale-105 transition-all duration-300"
-            >
-              <FiShoppingBag className="mr-2" />
-              Shop Now
-            </Link>
+            {showBuyerSections && (
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-3 rounded-lg font-medium shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <FiShoppingBag className="mr-2" />
+                Shop Now
+              </Link>
+            )}
             {!role && (
               <Link
                 to="/auth/register"
@@ -173,7 +179,8 @@ function Home() {
         )}
       </section>
 
-      {/* Categories Section */}
+      {/* Categories Section — buyer-only */}
+      {showBuyerSections && (
       <section className="px-6 py-16 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl md:text-3xl font-bold">Shop by Category</h2>
@@ -219,8 +226,10 @@ function Home() {
           </div>
         )}
       </section>
+      )}
 
-      {/* Featured Products */}
+      {/* Featured Products — buyer-only */}
+      {showBuyerSections && (
       <section className="px-6 py-16 bg-gray-50 dark:bg-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -249,9 +258,10 @@ function Home() {
           )}
         </div>
       </section>
+      )}
 
-      {/* Recently Viewed */}
-      <RecentlyViewed />
+      {/* Recently Viewed — buyer-only */}
+      {showBuyerSections && <RecentlyViewed />}
 
       {/* Testimonials */}
       <section className="px-6 py-16 max-w-6xl mx-auto">
@@ -337,13 +347,15 @@ function Home() {
             Join millions of happy customers and start shopping the smart way today.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/products"
-              className="inline-flex items-center justify-center bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg shadow-xl transform hover:scale-105 transition-all duration-300"
-            >
-              <FiShoppingBag className="mr-2" />
-              Start Shopping
-            </Link>
+            {showBuyerSections && (
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <FiShoppingBag className="mr-2" />
+                Start Shopping
+              </Link>
+            )}
             {!role && (
               <Link
                 to="/auth/register"

@@ -30,6 +30,8 @@ import {
   X,
   ChevronLeft,
   Store,
+  ShoppingBag,
+  Calendar,
 } from "lucide-react";
 
 const STATUS_CONFIG = {
@@ -37,6 +39,82 @@ const STATUS_CONFIG = {
   Shipped: { color: "amber", icon: Truck },
   Delivered: { color: "green", icon: CheckCircle2 },
   Cancelled: { color: "red", icon: XCircle },
+};
+
+const TRACKER_STEPS = [
+  { key: "Processing", label: "Processing", icon: Clock },
+  { key: "Shipped", label: "Shipped", icon: Truck },
+  { key: "Delivered", label: "Delivered", icon: CheckCircle2 },
+];
+
+const getOverallItemStatus = (items = []) => {
+  if (!items.length) return "Processing";
+  const statuses = items.map((i) => i.orderStatus);
+  const unique = [...new Set(statuses)];
+  if (unique.length === 1) return unique[0];
+  if (statuses.includes("Delivered")) return "Shipped";
+  if (statuses.includes("Shipped")) return "Shipped";
+  if (statuses.every((s) => s === "Cancelled")) return "Cancelled";
+  return "Processing";
+};
+
+const stepIndexFor = (status) => {
+  if (status === "Delivered") return 2;
+  if (status === "Shipped") return 1;
+  if (status === "Cancelled") return -1;
+  return 0;
+};
+
+const StatusTracker = ({ status }) => {
+  const idx = stepIndexFor(status);
+  const cancelled = status === "Cancelled";
+  return (
+    <div className="flex items-center">
+      {TRACKER_STEPS.map((step, i) => {
+        const done = !cancelled && i <= idx;
+        const active = !cancelled && i === idx;
+        const Icon = step.icon;
+        return (
+          <div key={step.key} className="flex items-center flex-1 min-w-0">
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div
+                className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  done
+                    ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
+                    : cancelled
+                    ? "bg-rose-100 text-rose-500 dark:bg-rose-900/30 dark:text-rose-300"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                }`}
+              >
+                <Icon size={16} />
+                {active && (
+                  <span className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping" />
+                )}
+              </div>
+              <span
+                className={`text-[11px] font-semibold ${
+                  done
+                    ? "text-gray-900 dark:text-white"
+                    : "text-gray-400 dark:text-gray-500"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < TRACKER_STEPS.length - 1 && (
+              <div
+                className={`flex-1 h-[3px] mx-2 rounded-full mb-5 ${
+                  i < idx && !cancelled
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-600"
+                    : "bg-gray-200 dark:bg-gray-800"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 const StatusBadge = ({ status }) => {
@@ -230,32 +308,69 @@ function OrderDetails() {
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen">
       <div className="max-w-5xl mx-auto px-4 py-6 md:py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Top nav */}
+        <div className="mb-4">
           <Link
             to="/my-orders"
-            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
+            Back to Orders
           </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-              Order Details
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-              #{order._id.substring(0, 12).toUpperCase()} &middot;{" "}
-              {format(new Date(order.createdAt), "MMM dd, yyyy")}
-            </p>
+        </div>
+
+        {/* Gradient hero header */}
+        <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-6 md:p-8 text-white shadow-xl shadow-blue-500/20">
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-12 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shadow-inner">
+                  <ShoppingBag size={20} />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-white/80">
+                    Order ID
+                  </p>
+                  <p className="font-mono text-lg font-bold">
+                    #{order._id.substring(0, 12).toUpperCase()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/90">
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  {format(new Date(order.createdAt), "dd MMM yyyy • hh:mm a")}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col items-start md:items-end gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur text-xs font-bold">
+                {order.isPaid ? "Paid" : "Payment Pending"}
+              </span>
+              <p className="text-2xl md:text-3xl font-bold">
+                ₹{Number(order.totalPrice || 0).toFixed(2)}
+              </p>
+              {order.isPaid && (
+                <button
+                  type="button"
+                  onClick={handleDownloadInvoice}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/20 backdrop-blur hover:bg-white/30 transition-colors"
+                >
+                  <Download size={13} /> Download Invoice
+                </button>
+              )}
+            </div>
           </div>
-          {order.isPaid && (
-            <button
-              type="button"
-              onClick={handleDownloadInvoice}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <Download size={14} /> Invoice
-            </button>
-          )}
+        </div>
+
+        {/* Fulfilment tracker */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 mb-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+            Fulfilment Progress
+          </p>
+          <StatusTracker status={getOverallItemStatus(order.orderItems)} />
         </div>
 
         {/* Refund banner — shows when any item is cancelled on a paid order */}
